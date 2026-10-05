@@ -1,0 +1,22 @@
+# Data never goes to Git (raw files and the RMF filtered extract)
+landing/
+_dados/
+*.parquet
+*.7z
+*.zip
+*.COMT
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Databricks bundle local state
+.databricks/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
