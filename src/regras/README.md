@@ -1,0 +1,1 @@
+Pure Python business rules shared by pipelines, app and tests.
