@@ -1,0 +1,51 @@
+﻿caged\tipo=MOV\competencia=202507: 84,952 linhas
+caged\tipo=FOR\competencia=202507: 1,586 linhas
+caged\tipo=EXC\competencia=202507: 282 linhas
+caged\tipo=MOV\competencia=202508: 85,561 linhas
+caged\tipo=FOR\competencia=202508: 1,004 linhas
+caged\tipo=EXC\competencia=202508: 169 linhas
+caged\tipo=MOV\competencia=202509: 86,629 linhas
+caged\tipo=FOR\competencia=202509: 1,073 linhas
+caged\tipo=EXC\competencia=202509: 148 linhas
+caged\tipo=MOV\competencia=202510: 86,696 linhas
+caged\tipo=FOR\competencia=202510: 738 linhas
+caged\tipo=EXC\competencia=202510: 137 linhas
+caged\tipo=MOV\competencia=202511: 72,975 linhas
+caged\tipo=FOR\competencia=202511: 1,187 linhas
+caged\tipo=EXC\competencia=202511: 101 linhas
+caged\tipo=MOV\competencia=202512: 64,257 linhas
+caged\tipo=FOR\competencia=202512: 902 linhas
+caged\tipo=EXC\competencia=202512: 104 linhas
+caged\tipo=MOV\competencia=202601: 80,125 linhas
+caged\tipo=FOR\competencia=202601: 906 linhas
+caged\tipo=EXC\competencia=202601: 192 linhas
+caged\tipo=MOV\competencia=202602: 77,427 linhas
+caged\tipo=FOR\competencia=202602: 2,429 linhas
+caged\tipo=EXC\competencia=202602: 198 linhas
+caged\tipo=MOV\competencia=202603: 85,380 linhas
+caged\tipo=FOR\competencia=202603: 2,024 linhas
+caged\tipo=EXC\competencia=202603: 150 linhas
+caged\tipo=MOV\competencia=202604: 81,842 linhas
+caged\tipo=FOR\competencia=202604: 1,404 linhas
+caged\tipo=EXC\competencia=202604: 180 linhas
+caged\tipo=MOV\competencia=202605: 85,018 linhas
+caged\tipo=FOR\competencia=202605: 1,397 linhas
+caged\tipo=EXC\competencia=202605: 155 linhas
+caged\tipo=MOV\competencia=202606: 86,893 linhas
+caged\tipo=FOR\competencia=202606: 1,372 linhas
+caged\tipo=EXC\competencia=202606: 188 linhas
+rais\ano_base=2025: 1,931,903 linhas
+pnad\ano=2025\trimestre=1: 7,177 linhas
+pnad\ano=2025\trimestre=2: 7,713 linhas
+pnad\ano=2025\trimestre=3: 7,845 linhas
+pnad\ano=2025\trimestre=4: 7,813 linhas
+pnad\ano=2026\trimestre=1: 8,055 linhas
+pnad\ano=2026\trimestre=2: 8,041 linhas
+referencia/caged_sexo.csv: 3 códigos (Descrição)
+referencia/caged_racacor.csv: 7 códigos (Descrição)
+referencia/caged_graudeinstrucao.csv: 13 códigos (Descrição)
+referencia/caged_tipomovimentacao.csv: 18 códigos (Descrição)
+referencia/caged_unidadesalariocodigo.csv: 8 códigos (Descrição)
+referencia/caged_categoria.csv: 10 códigos (Descrição)
+referencia/caged_secao.csv: 22 códigos (Descrição)
+referencia/cnae_classe_secao.json: 673 classes
