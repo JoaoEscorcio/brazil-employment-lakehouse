@@ -17,10 +17,10 @@ from pathlib import Path
 import openpyxl
 import polars as pl
 
-from pipeline import extract
-from pipeline.pnad import extract as pnad_extract, transform as pnad_transform
-from pipeline.rais import extract as rais_extract, transform as rais_transform
-from pipeline.transform import RMF_MUNICIPIOS
+from fontes import extract
+from fontes.pnad import extract as pnad_extract, transform as pnad_transform
+from fontes.rais import extract as rais_extract, transform as rais_transform
+from fontes.transform import RMF_MUNICIPIOS
 
 EMPREGA = Path(r"C:\Projetos\Emprega+")
 DADOS = EMPREGA / "_dados"

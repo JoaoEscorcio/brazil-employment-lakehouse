@@ -14,7 +14,7 @@ from pathlib import Path
 
 import polars as pl
 
-from pipeline.transform import FAIXAS, RMF_MUNICIPIOS
+from fontes.transform import FAIXAS, RMF_MUNICIPIOS
 
 COL_MUNICIPIO = "Munic\xedpio - C\xf3digo"
 COL_ATIVO_31_12 = "Ind V\xednculo Ativo 31/12 - C\xf3digo"
