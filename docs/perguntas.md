@@ -49,7 +49,8 @@ A gold table is filtered by the dashboard in many ways (municipality, age band, 
 | `rais_ocupacoes` | municipality x CBO occupation | additive + numerator/denominator |
 | `rais_indicadores_municipio` | municipality (plus one row for the whole metro region) | non-additive, pre-computed |
 | `rais_quociente_locacional` | municipality x CNAE section | non-additive, pre-computed |
-| `pnad_indicadores` | quarter x area (metro region / Fortaleza) x sex ("all" included) | non-additive, pre-computed |
+| `pnad_mercado_trabalho` | quarter x area (Fortaleza / rest of the metro region) x sex x age band x race group | additive weighted components (sums of `peso`) |
+| `pnad_indicadores` | quarter x area (metro region / Fortaleza) x sex x public (all / young people 15-29), "all" included | non-additive, pre-computed from the components |
 | `pnad_posicao_ocupacao` | quarter x area x position in occupation | additive (weighted) |
 
 ## Indicators
@@ -97,7 +98,7 @@ Filter available: quarter, metro region or Fortaleza only.
 | Question | Indicator | Gold table | Computation (all weighted by `peso`) | Emprega+ endpoint |
 |----------|-----------|------------|--------------------------------------|-------------------|
 | How many people can and want to work? | Working-age population (14+), labour force, % women in labour force | `pnad_indicadores` | sums of weights | `/kpis`, `/populacao` |
-| How many are unemployed? | Unemployment rate, and its evolution | `pnad_indicadores` | unemployed / labour force | `/kpis`, `/evolucao` |
+| How many are unemployed, and how many young people? | Unemployment rate (all and 15-29), and its evolution | `pnad_indicadores` | unemployed / labour force | `/kpis`, `/evolucao` |
 | How much work is informal? | Informality rate, among all and among women | `pnad_indicadores` | informal / employed (BID/MTE definition) | `/informalidade`, `/informalidade-conta-propria` |
 | How many work on their own? | % self-employed | `pnad_indicadores` | self-employed / employed | `/informalidade-conta-propria` |
 | How many contribute to social security? | % contributing | `pnad_indicadores` | contributors / employed | `/contribuicao-previdenciaria` |
@@ -105,6 +106,12 @@ Filter available: quarter, metro region or Fortaleza only.
 | How much do workers earn? | Usual income; women/men, black/white, informal/formal ratios | `pnad_indicadores` | weighted averages and ratios | `/rendimentos` |
 | Is income growing in real terms? | Nominal vs real usual income | `pnad_indicadores` + `dim_pnad_deflator` | income x IBGE deflator for Ceará | `/evolucao-rendimento` |
 | What kind of jobs? | Employed by position in occupation | `pnad_posicao_ocupacao` | sums of weights | `/categoria-ocupacao` |
+
+### Implementation note: PNAD
+
+Rates do not add up, but sums of weights do: unemployed people in Fortaleza plus unemployed people in the rest of the metro region are the unemployed of the metro region. So the PNAD gold has a base table of **weighted components** (`pnad_mercado_trabalho`) and a table of **ready rates** (`pnad_indicadores`) computed from it for the cuts the dashboard uses. Any other cut is `SUM(component) / SUM(component)` over the base table. Both tables carry the number of people actually interviewed, and `amostra_suficiente` is false when fewer than 30 unemployed people were interviewed in that cut.
+
+Reconciled with Emprega+ for 2026 Q2 (metro region and Fortaleza): labour force, employed, unemployed, unemployment, informality, self-employment, social security, underemployment, discouragement, underutilisation, average income and the three income ratios are all identical.
 
 ## Questions the data cannot answer
 
