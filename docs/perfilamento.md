@@ -1,0 +1,46 @@
+# Data profiling: bronze layer
+
+Before writing any silver rule, the three bronze tables were profiled to find what is wrong, odd or ambiguous in the data as published. Each finding below turns into a silver rule or a gold decision.
+
+- **Notebook with all queries and outputs:** [`src/exploracao/01_perfil_bronze`](../src/exploracao/01_perfil_bronze) (in Portuguese)
+- **Tables:** `bronze.caged_movimentacao` (995,781 rows), `bronze.rais_vinculo` (1,931,903), `bronze.pnad_pessoa` (46,644)
+- **Scope:** Fortaleza Metropolitan Region (19 municipalities). CAGED 07/2025–06/2026, RAIS 2025, PNAD 2025Q1–2026Q2. Profiled on 2026-10-06.
+
+## Summary
+
+| # | Finding | Evidence | Risk if ignored | Decision |
+|---|---------|----------|-----------------|----------|
+| A0 | PNAD `ano`/`trimestre` existed both in the file and in the folder path | 46,644 rows (100%) landed in `_rescued_data` | The rescue column is the alarm for schema problems; always firing, it would hide a real one | **Fixed in bronze:** `partitionColumns = ""` for PNAD + full refresh. Now 0 rescued rows |
+| A1 | Each monthly CAGED release rewrites past months | FOR files reach back to 07/2024, EXC to 01/2020; 4,133 rows refer to months before the project window | Inflated balance in the release month; isolated old months look like dramatic drops | Aggregate by `competenciamov` (event month), never by release month; silver as materialized view; explicit period filter in gold |
+| A2 | Numbers are stored as text, with a different convention per source | CAGED uses decimal comma (`937,00`); RAIS uses decimal point and `.00` for zero; PNAD has leading zeros (`000786.34`, `070`). `CAST` fails; `try_cast` without cleaning nulls 100% of CAGED salaries silently | Pipeline crash, or every salary silently becomes NULL | Source-specific conversion per column, plus an expectation that counts failed conversions |
+| A3 | The same concept has different codes in each source | Woman = **3** in CAGED, 2 in RAIS and PNAD. Mixed race (*parda*) = **3** in CAGED, **8** in RAIS, **4** in PNAD (most frequent code in all three) | Joining sources by code makes women disappear from CAGED and turns *pardo* people into *amarelo* in PNAD, with no error raised | Each source maps its codes to shared labels (conformed dimension), keeping the original code; unit test locks `SEXO_CAGED["3"] == "Mulher"` |
+| A4 | Some values mean "unknown" or "not applicable" | CAGED `999` = not identified (34 rows); RAIS remuneration `.00` (202,672 rows); 1,374 PNAD rows with null labour-force status, **all** under 14 years old. Education code `80` is valid (postgraduate), not an error | "Unknown" becomes a fake category or drags averages down; turning PNAD nulls into 0 breaks the unemployment rate denominator | "Not identified" codes and RAIS `.00` become NULL; PNAD nulls stay NULL, with the meaning documented in the column comment |
+| A5 | The salary unit in CAGED is unreliable | Monthly salaries of R$ 7.37 (= hourly minimum wage: 7.37 × 220 h = 1,621); "hourly" salaries with a median of R$ 1,113; 1,127 zeros; max R$ 1,362,163. Mean R$ 2,040 vs median R$ 1,658 | Mixing hourly and monthly values; averages pulled up by typos | `salario_mensal` only when unit = month **and** value between **0.3 and 30 minimum wages**; original value and unit kept. Gold always uses the **median** |
+| A6 | Some questions cannot be answered with public microdata | 99.97% of CAGED hires have admission type 97 ("ignored"); RAIS neighbourhood columns hold a single value; RAIS has 586,019 closed contracts out of 1.93 M; PNAD has only 189–284 unemployed people per quarter in the sample | Promising impossible indicators (first job, by neighbourhood); overstating employment by 44%; unreliable fine-grained estimates | Drop constant RAIS columns; add `ativo_31_12`; employment stock counts active contracts only; PNAD only at metro-region level (or large cuts), always weighted; no "first job" indicator |
+
+## Details
+
+### A5: salary plausibility rule
+
+The minimum wage is the natural yardstick: R$ 1,621.00 is the most frequent salary in January 2026 (21,986 hires, 27% of the month).
+
+Monthly-coded salaries (unit 5) by band of minimum wages (MW):
+
+| Band | Hires | Avg. weekly hours | Part-time |
+|------|------:|------------------:|----------:|
+| zero | 184 | 36.4 | 44 |
+| below 0.1 MW | 736 | 32.2 | 381 |
+| 0.1 to 0.3 MW | 37 | 26.1 | 15 |
+| 0.3 to 0.5 MW | 723 | 21.5 | 306 |
+| 0.5 to 30 MW | 74,050 | 42.7 | 1,525 |
+| above 30 MW | 30 | 44.0 | 0 |
+
+- **Below 0.1 MW:** hourly values reported with the monthly unit.
+- **0.3 to 0.5 MW:** legitimate part-time contracts (21.5 h/week on average). A cut at 1 MW would drop real workers.
+- **Effect of the rule:** it keeps 74,773 of 75,576 monthly hires (98.9%); the median stays at R$ 1,658 and the mean moves from R$ 2,045 to R$ 2,010.
+- **Rejected alternative:** converting hourly values to monthly (× 220). It would require guessing each person's working hours, for about 1% of hires.
+
+## Open points
+
+- Confirm the official 2026 minimum wage before hard-coding it (R$ 1,621 was inferred from the data).
+- Review the 0.3 / 30 MW thresholds once the silver layer exists, using all twelve months instead of January only.
