@@ -78,5 +78,8 @@ def rais_bronze():
     name="brazil_employment.bronze.pnad_pessoa",
     comment="PNAD Contínua, pessoas da RM de Fortaleza (RM_RIDE=23), como veio da fonte",
 )
+
 def pnad_bronze():
-    return _auto_loader("pnad", "ano,trimestre")
+    # "" = ignorar as colunas do caminho: ano e trimestre já existem DENTRO do
+    # arquivo. Declarar as duas duplicava a informação e enchia o _rescued_data.
+    return _auto_loader("pnad", "")
