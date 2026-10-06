@@ -31,3 +31,27 @@ def porte(subsetor: int | None, tamestab: int | None) -> str | None:
     if subsetor in SUBSETOR_AGRO_COMERCIO_SERVICOS:
         return TAMESTAB_PORTE_SERVICOS.get(tamestab)
     return None
+
+
+# -----------------------------------------------------------------------------
+# Porte oficial: elegibilidade (Glossário do painel BID/MTE, como no Emprega+).
+# O porte só se aplica a EMPRESAS: sociedades empresárias (2046-2348) e
+# empresários / pessoas físicas empregadoras (4014-4120). Órgãos públicos (1xxx),
+# associações, fundações e cooperativas (3xxx) não entram.
+# -----------------------------------------------------------------------------
+NATUREZAS_PORTE_ELEGIVEIS = {
+    2046, 2054, 2062, 2135, 2232, 2240, 2259, 2267, 2283, 2291,
+    2305, 2313, 2321, 2330, 2348, 4014, 4022, 4081, 4111, 4120,
+}
+
+# -----------------------------------------------------------------------------
+# Rotatividade descontada (metodologia DIEESE, Glossário BID/MTE):
+# taxa = min(admissões, desligamentos) / vínculos ativos em 31/12, sem os
+# estatutários (não são contratados nem demitidos pelo mercado) e sem os
+# desligamentos que não são decisão do mercado: pedido de demissão (21),
+# transferência (30, 31), morte (60, 62-64) e aposentadoria (70-80).
+# -----------------------------------------------------------------------------
+TIPOS_VINCULO_ESTATUTARIO = {30, 31, 35}
+MOTIVOS_FORA_DA_ROTATIVIDADE = {
+    21, 30, 31, 60, 62, 63, 64, 70, 71, 72, 73, 74, 75, 76, 78, 79, 80,
+}

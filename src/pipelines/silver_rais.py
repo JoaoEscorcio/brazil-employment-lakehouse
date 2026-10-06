@@ -17,10 +17,19 @@ from pyspark.sql import functions as F
 
 from comum.colunas import decimal_ponto, faixa_etaria_col, inteiro, traduzir
 from regras.codigos import RACA_RAIS, SEXO_RAIS
-from regras.rais import SUBSETOR_ADMINISTRACAO_PUBLICA
+from regras.rais import (
+    MOTIVOS_FORA_DA_ROTATIVIDADE,
+    NATUREZAS_PORTE_ELEGIVEIS,
+    SUBSETOR_ADMINISTRACAO_PUBLICA,
+    TIPOS_VINCULO_ESTATUTARIO,
+)
 from regras.rmf import RMF_MUNICIPIOS
 
 RMF_SQL = ",".join(str(c) for c in RMF_MUNICIPIOS)
+
+
+def em(coluna, codigos: set):
+    return coluna.isin(sorted(codigos))
 
 
 # A4: remuneração zero ".00" significa "não informada", não "ganhou zero".
@@ -47,6 +56,11 @@ def remuneracao(coluna: str):
 def rais_silver():
     b = spark.read.table("brazil_employment.bronze.rais_vinculo")
     idade = inteiro("idade")
+    tipo_vinculo = inteiro("tipo_vinculo_codigo")
+    mes_admissao = inteiro("mes_admissao_codigo")
+    mes_desligamento = inteiro("mes_desligamento_codigo")
+    motivo = inteiro("motivo_desligamento_codigo")
+    estatutario = em(tipo_vinculo, TIPOS_VINCULO_ESTATUTARIO)
 
     vinculo = b.select(
         F.col("ano_base"),
@@ -68,6 +82,14 @@ def rais_silver():
         inteiro("ibge_subsetor_codigo").alias("ibge_subsetor_codigo"),
         inteiro("tamanho_estabelecimento_codigo").alias("tamanho_estabelecimento_codigo"),
         (inteiro("ind_estabelecimento_participante_simples_codigo") == 1).alias("optante_simples"),
+        # porte oficial só para empresas (Glossário BID/MTE)
+        em(inteiro("natureza_juridica_codigo"), NATUREZAS_PORTE_ELEGIVEIS).alias("elegivel_porte"),
+
+        # --- rotatividade DIEESE: o que conta como entrada e saída do mercado --
+        estatutario.alias("estatutario"),
+        (mes_admissao.between(1, 12) & ~estatutario).alias("admissao_rotatividade"),
+        (mes_desligamento.between(1, 12) & ~estatutario
+         & ~em(motivo, MOTIVOS_FORA_DA_ROTATIVIDADE)).alias("desligamento_rotatividade"),
 
         # --- o trabalhador (A3 + A4) -------------------------------------------
         F.trim("cbo_2002_ocupacao_codigo").alias("cbo_codigo"),
