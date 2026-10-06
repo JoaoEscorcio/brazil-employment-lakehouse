@@ -1,0 +1,20 @@
+# Store every text file with LF line endings, whatever the editor or OS.
+# Databricks and Linux use LF; Windows editors and clipboard may add CRLF.
+* text=auto eol=lf
+
+# Code and docs: always text, always LF (also fixes files committed with CRLF)
+*.py    text eol=lf
+*.sql   text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.csv   text eol=lf
+*.ipynb text eol=lf
+
+# Binary files: never touch
+*.parquet binary
+*.png     binary
+*.7z      binary
+*.zip     binary
