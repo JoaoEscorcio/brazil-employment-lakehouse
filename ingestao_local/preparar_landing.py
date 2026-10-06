@@ -8,6 +8,7 @@ nenhuma regra de negócio é aplicada aqui: isso é trabalho da camada Silver.
 """
 from __future__ import annotations
 
+import csv
 import json
 import re
 import shutil
@@ -16,6 +17,7 @@ from pathlib import Path
 
 import openpyxl
 import polars as pl
+import xlrd
 
 from fontes import extract
 from fontes.pnad import extract as pnad_extract, transform as pnad_transform
@@ -25,6 +27,7 @@ from fontes.transform import RMF_MUNICIPIOS
 EMPREGA = Path(r"C:\Projetos\Emprega+")
 DADOS = EMPREGA / "_dados"
 LAYOUT_CAGED = EMPREGA / "docs_oficiais" / "Layout Nao-identificado Novo Caged Movimentacao.xlsx"
+DEFLATOR_PNAD = EMPREGA / "docs_oficiais" / "pnad" / "Deflatores" / "deflator_PNADC_2026_trimestral_040506.xls"
 SAIDA = Path(__file__).parent / "landing"
 
 RMF = [str(c) for c in RMF_MUNICIPIOS]
@@ -33,7 +36,10 @@ COMPETENCIAS = [202507, 202508, 202509, 202510, 202511, 202512,
 TRIMESTRES_PNAD = [(2025, 1), (2025, 2), (2025, 3), (2025, 4), (2026, 1), (2026, 2)]
 # abas do layout oficial que viram dimensões na Silver (decodificação de códigos)
 ABAS_LAYOUT_CAGED = ["sexo", "raçacor", "graudeinstrução", "tipomovimentação",
-                     "unidadesaláriocódigo", "categoria", "seção"]
+                     "unidadesaláriocódigo", "categoria", "seção", "cbo2002ocupação"]
+UF_CEARA = "23"
+# trimestres móveis do arquivo de deflatores do IBGE -> trimestre civil
+TRIMESTRE_DEFLATOR = {"01-02-03": 1, "04-05-06": 2, "07-08-09": 3, "10-11-12": 4}
 
 
 def snake(nome: str) -> str:
@@ -91,8 +97,46 @@ def referencia() -> None:
     print(f"referencia/cnae_classe_secao.json: {len(json.loads(cnae.read_text(encoding='utf-8')))} classes")
 
 
+def rais_ceara(ano: int = 2025) -> None:
+    """RAIS do Ceará inteiro, só com as colunas do quociente locacional.
+
+    O QL compara cada município com o Ceará (glossário BID/MTE), e o recorte da RMF não
+    basta. Para não subir o Nordeste inteiro, o recorte aqui é por LINHA (UF = 23) e por
+    COLUNA (só as 3 necessárias). Nenhuma soma é feita aqui: a agregação fica na silver.
+    """
+    comt = rais_extract.obter_dados(ano, DADOS / "rais")
+    colunas = ["Município - Código", "Ind Vínculo Ativo 31/12 - Código", "CNAE 2.0 Classe - Código"]
+    linhas = []
+    with open(comt, encoding="latin-1", newline="") as f:
+        leitor = csv.reader(f, delimiter=",")
+        cabecalho = next(leitor)
+        idx = [cabecalho.index(c) for c in colunas]
+        for row in leitor:
+            if row[idx[0]].strip().startswith(UF_CEARA):
+                linhas.append([row[i] for i in idx])
+    df = pl.DataFrame(linhas, schema=colunas, orient="row")
+    gravar(df, SAIDA / "rais_ceara" / f"ano_base={ano}")
+
+
+def deflator_pnad() -> None:
+    """Deflatores oficiais da PNAD (IBGE), só o Ceará, para o rendimento real."""
+    folha = xlrd.open_workbook(DEFLATOR_PNAD).sheet_by_index(0)
+    linhas = []
+    for i in range(1, folha.nrows):
+        ano, trim, uf, habitual, efetivo = folha.row_values(i)[:5]
+        if str(uf).strip() == UF_CEARA and trim in TRIMESTRE_DEFLATOR:
+            linhas.append([str(ano).strip(), str(TRIMESTRE_DEFLATOR[trim]), str(habitual), str(efetivo)])
+    destino = SAIDA / "referencia"
+    destino.mkdir(parents=True, exist_ok=True)
+    df = pl.DataFrame(linhas, schema=["ano", "trimestre", "deflator_habitual", "deflator_efetivo"], orient="row")
+    df.write_csv(destino / "pnad_deflator_ceara.csv")
+    print(f"referencia/pnad_deflator_ceara.csv: {df.height} trimestres")
+
+
 if __name__ == "__main__":
     caged()
     rais()
     pnad()
     referencia()
+    rais_ceara()
+    deflator_pnad()

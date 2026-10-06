@@ -73,3 +73,21 @@ def dim_porte():
     return spark.createDataFrame(
         linhas, "ibge_subsetor_codigo INT, tamanho_estabelecimento_codigo INT, porte STRING"
     )
+
+
+# Deflatores oficiais da PNAD (IBGE) para o Ceará: rendimento real =
+# rendimento nominal x deflator. Base = trimestre mais recente do arquivo.
+@dp.materialized_view(
+    name="brazil_employment.silver.dim_pnad_deflator",
+    comment="Deflatores trimestrais da PNAD Contínua para o Ceará (IBGE): rendimento real = nominal x deflator",
+)
+def dim_pnad_deflator():
+    return (
+        spark.read.option("header", True).csv(f"{REFERENCIA}/pnad_deflator_ceara.csv")
+        .select(
+            F.col("ano").cast("int").alias("ano"),
+            F.col("trimestre").cast("int").alias("trimestre"),
+            F.col("deflator_habitual").cast("double").alias("deflator_habitual"),
+            F.col("deflator_efetivo").cast("double").alias("deflator_efetivo"),
+        )
+    )

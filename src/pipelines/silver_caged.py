@@ -17,9 +17,17 @@ from regras.rmf import (
     RMF_MUNICIPIOS,
     SALARIO_MENSAL_MAX_SM,
     SALARIO_MENSAL_MIN_SM,
-    SALARIO_MINIMO,
+    SALARIO_MINIMO_POR_ANO,
     UNIDADE_SALARIO_MENSAL,
 )
+
+
+# Ano -> valor (ex.: salário mínimo). Anos fora do dicionário viram NULL.
+def traduzir_ano(ano, dicionario: dict):
+    expr = None
+    for chave, valor in dicionario.items():
+        expr = F.when(ano == chave, valor) if expr is None else expr.when(ano == chave, valor)
+    return expr
 
 
 RMF_SQL = ",".join(str(c) for c in RMF_MUNICIPIOS)
@@ -63,10 +71,13 @@ def caged_silver():
     efeito = saldo * F.when(F.col("tipo") == "EXC", -1).otherwise(1)
 
     # A5: salário mensal só quando a unidade é "mês" e o valor é plausível
+    # A régua é o salário mínimo do ANO da movimentação (2025 != 2026).
+    ano_mov = (inteiro("competenciamov") / 100).cast("int")
+    salario_minimo = traduzir_ano(ano_mov, SALARIO_MINIMO_POR_ANO)
     salario_mensal = F.when(
         (F.col("unidadesalariocodigo") == UNIDADE_SALARIO_MENSAL)
-        & salario.between(SALARIO_MENSAL_MIN_SM * SALARIO_MINIMO,
-                          SALARIO_MENSAL_MAX_SM * SALARIO_MINIMO),
+        & salario.between(SALARIO_MENSAL_MIN_SM * salario_minimo,
+                          SALARIO_MENSAL_MAX_SM * salario_minimo),
         salario,
     )
 

@@ -44,11 +44,17 @@ def sinal_efeito(tipo_arquivo: str) -> int:
 
 # -----------------------------------------------------------------------------
 # Plausibilidade do salário mensal (achado A5 do perfilamento).
-# O valor mais frequente no CAGED de jan/2026 é R$ 1.621, compatível com o
-# salário mínimo de 2026. PENDENTE: confirmar o valor oficial.
+# A régua é o salário mínimo VIGENTE NO MÊS da movimentação: uma admissão de
+# 2025 se compara com o mínimo de 2025. Valores oficiais (decretos federais),
+# usados também pelo Emprega+: 2025 = R$ 1.518; 2026 = R$ 1.621 (é o valor
+# mais frequente no CAGED de jan/2026). Anos anteriores aparecem só em linhas
+# FOR/EXC fora da janela do projeto.
 # Piso de 0,3 SM preserva contratos de tempo parcial; teto de 30 SM corta erros.
 # -----------------------------------------------------------------------------
-SALARIO_MINIMO = 1621.0
+SALARIO_MINIMO_POR_ANO = {
+    2020: 1045.0, 2021: 1100.0, 2022: 1212.0, 2023: 1320.0,
+    2024: 1412.0, 2025: 1518.0, 2026: 1621.0,
+}
 SALARIO_MENSAL_MIN_SM = 0.3
 SALARIO_MENSAL_MAX_SM = 30.0
 UNIDADE_SALARIO_MENSAL = "5"

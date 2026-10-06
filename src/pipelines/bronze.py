@@ -83,3 +83,13 @@ def pnad_bronze():
     # "" = ignorar as colunas do caminho: ano e trimestre já existem DENTRO do
     # arquivo. Declarar as duas duplicava a informação e enchia o _rescued_data.
     return _auto_loader("pnad", "")
+
+
+# RAIS do Ceará inteiro, só 3 colunas (município, vínculo ativo, classe CNAE).
+# Existe para o quociente locacional, que compara cada município com o estado.
+@dp.table(
+    name="brazil_employment.bronze.rais_ceara_vinculo",
+    comment="RAIS Vínculos do Ceará inteiro (UF 23), só as colunas do quociente locacional, como veio da fonte",
+)
+def rais_ceara_bronze():
+    return _auto_loader("rais_ceara", "ano_base")

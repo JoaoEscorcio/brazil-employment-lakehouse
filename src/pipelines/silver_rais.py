@@ -99,3 +99,27 @@ def rais_silver():
         .join(cnae, "cnae_classe", "left")
         .join(porte, ["ibge_subsetor_codigo", "tamanho_estabelecimento_codigo"], "left")
     )
+
+
+# Estoque do Ceará por município e seção CNAE, para o quociente locacional
+# (QL = participação do setor no município / participação do setor no estado).
+# Só vínculos ativos em 31/12 (estoque, achado A6).
+@dp.materialized_view(
+    name="brazil_employment.silver.rais_estoque_ceara_secao",
+    comment="Vínculos ativos em 31/12 no Ceará, por município e seção CNAE. Base do quociente locacional.",
+)
+@dp.expect("tem_secao_cnae", "cnae_secao IS NOT NULL")
+def rais_estoque_ceara_secao():
+    b = spark.read.table("brazil_employment.bronze.rais_ceara_vinculo")
+    cnae = spark.read.table("brazil_employment.silver.dim_cnae_classe")
+    return (
+        b.where(inteiro("ind_vinculo_ativo_31_12_codigo") == 1)
+        .select(
+            F.col("ano_base"),
+            inteiro("municipio_codigo").alias("municipio_codigo"),
+            inteiro("cnae_2_0_classe_codigo").alias("cnae_classe"),
+        )
+        .join(cnae, "cnae_classe", "left")
+        .groupBy("ano_base", "municipio_codigo", "cnae_secao")
+        .agg(F.count("*").alias("vinculos_ativos"))
+    )
