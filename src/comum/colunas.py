@@ -38,4 +38,10 @@ def faixa_etaria_col(idade):
     expr = F.lit("30+")
     for inicio, fim, rotulo in reversed(FAIXAS):
         expr = F.when(idade.between(inicio, fim), rotulo).otherwise(expr)
-    return F.when(idade < 15, "<15").otherwise(expr)
+    # Idade ausente ou 0 vira NULL ANTES das comparações: comparar com NULL nunca
+    # é verdadeiro, e sem esta linha o valor escorregava até o último caso ("30+").
+    return (
+        F.when(idade.isNull() | (idade <= 0), F.lit(None).cast("string"))
+        .when(idade < 15, "<15")
+        .otherwise(expr)
+    )

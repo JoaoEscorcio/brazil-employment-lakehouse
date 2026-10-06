@@ -18,6 +18,9 @@ Before writing any silver rule, the three bronze tables were profiled to find wh
 | A5 | The salary unit in CAGED is unreliable | Monthly salaries of R$ 7.37 (= hourly minimum wage: 7.37 × 220 h = 1,621); "hourly" salaries with a median of R$ 1,113; 1,127 zeros; max R$ 1,362,163. Mean R$ 2,040 vs median R$ 1,658 | Mixing hourly and monthly values; averages pulled up by typos | `salario_mensal` only when unit = month **and** value between **0.3 and 30 minimum wages**; original value and unit kept. Gold always uses the **median** |
 | A6 | Some questions cannot be answered with public microdata | 99.97% of CAGED hires have admission type 97 ("ignored"); RAIS neighbourhood columns hold a single value; RAIS has 586,019 closed contracts out of 1.93 M; PNAD has only 189–284 unemployed people per quarter in the sample | Promising impossible indicators (first job, by neighbourhood); overstating employment by 44%; unreliable fine-grained estimates | Drop constant RAIS columns; add `ativo_31_12`; employment stock counts active contracts only; PNAD only at metro-region level (or large cuts), always weighted; no "first job" indicator |
 | A7 | RAIS IBGE subsector 24 is public administration, which has no company size | 351,914 contracts (18%) with no size; all have public legal nature (1xxx) and CNAE section O. Found by the `tem_porte` expectation in silver | An alarm that always fires hides real gaps; the original Emprega+ comment called code 24 "not in the official table" | Subsector 24 documented in `regras/rais.py`; `tem_porte` only alarms for non-public employers |
+| A8 | Missing age fell into the last age band | 574 CAGED movements with no age were labelled "30+"; 64 RAIS contracts with age 0 (= not informed) were labelled "<15". Comparisons with NULL are never true, so the value slipped to the final `otherwise` | Invented ages in a youth dashboard; the same logic existed in Emprega+ | Age band is NULL ("Não informada" in gold) when age is missing or 0, both in `regras/rmf.py` and in `comum/colunas.py` |
+| A9 | CBO codes lost their leading zero | 28 military occupation codes (e.g. `010105`) were stored as numbers in the official Excel layout and became `10105` | Those occupations would have no name after the join | Silver `dim_caged_codigo` left-pads CBO codes to 6 digits |
+| A10 | Emprega+ counted excluded hires as hires | Gold vs Emprega+ for the 12-month window: same balance (28,810), but 509,288 vs 510,020 hires and 480,478 vs 481,628 separations. The gaps are exactly twice the EXC rows in the window: Emprega+ added +1 for each excluded hire, the gold adds -1 (NT 11/2021) | Hires and separations slightly overstated in the original dashboard | Gold sums `efeito` for both measures; difference documented as a correction, not a regression |
 
 ## Details
 
@@ -44,6 +47,10 @@ Monthly-coded salaries (unit 5) by band of minimum wages (MW):
 ### A7: found in silver, not in bronze
 
 Not every finding shows up during profiling. This one came from a silver expectation (`tem_porte`) that failed on 351,914 RAIS contracts. All of them belong to IBGE subsector 24, *Administração pública direta e autárquica*: legal nature starting with 1 (public bodies) and CNAE section O (84116 general public administration, 84124 health and education regulation). Company size (micro to large) only applies to companies, so a NULL size is correct for the public sector. The expectation was refined, not the data.
+
+### A8 to A10: found while building silver fixes and gold
+
+Reconciliation is not only a way to confirm results: comparing the gold layer with Emprega+ (A10) exposed a small error in the original dashboard, and checking the gold joins exposed two data issues (A8, A9) that had been in place since the original project.
 
 ## Open points
 

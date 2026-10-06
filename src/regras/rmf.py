@@ -23,7 +23,8 @@ FAIXAS = [(15, 17, "15-17"), (18, 24, "18-24"), (25, 29, "25-29")]
 
 
 def faixa_etaria(idade: int | None) -> str | None:
-    if idade is None:
+    # Idade ausente ou 0 (a RAIS usa 0 para "não informada") não tem faixa.
+    if idade is None or idade <= 0:
         return None
     if idade < 15:
         return "<15"

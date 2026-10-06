@@ -9,7 +9,7 @@ from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 
 from regras.rais import SUBSETOR_AGRO_COMERCIO_SERVICOS, SUBSETOR_INDUSTRIA_CONSTRUCAO, porte
-from regras.rmf import RMF_MUNICIPIOS
+from regras.rmf import RMF_MUNICIPIOS, SALARIO_MINIMO_POR_ANO
 
 REFERENCIA = "/Volumes/brazil_employment/landing/raw/referencia"
 
@@ -38,9 +38,14 @@ def dim_municipio():
 def dim_caged_codigo():
     return (
         spark.read.option("header", True).csv(f"{REFERENCIA}/caged_*.csv")
+        .withColumn("dominio", F.regexp_extract(F.col("_metadata.file_name"), r"caged_(.*)\.csv", 1))
         .select(
-            F.regexp_extract(F.col("_metadata.file_name"), r"caged_(.*)\.csv", 1).alias("dominio"),
-            F.col("codigo"),
+            "dominio",
+            # A CBO tem 6 dígitos e começa com 0 nos militares (010105). O layout
+            # oficial é um Excel que guarda o código como número e perde o zero
+            # (10105); sem repor, o join com o CAGED falha para 28 ocupações.
+            F.when(F.col("dominio") == "cbo2002ocupacao", F.lpad("codigo", 6, "0"))
+             .otherwise(F.col("codigo")).alias("codigo"),
             F.col("descricao"),
         )
     )
@@ -90,4 +95,16 @@ def dim_pnad_deflator():
             F.col("deflator_habitual").cast("double").alias("deflator_habitual"),
             F.col("deflator_efetivo").cast("double").alias("deflator_efetivo"),
         )
+    )
+
+
+# Salário mínimo nacional por ano: régua das faixas salariais em "salários
+# mínimos" da gold. Sai de regras/rmf.py, a mesma usada na plausibilidade (A5).
+@dp.materialized_view(
+    name="brazil_employment.silver.dim_salario_minimo",
+    comment="Salário mínimo nacional por ano (R$), régua das faixas em salários mínimos",
+)
+def dim_salario_minimo():
+    return spark.createDataFrame(
+        sorted(SALARIO_MINIMO_POR_ANO.items()), "ano INT, valor DOUBLE"
     )
