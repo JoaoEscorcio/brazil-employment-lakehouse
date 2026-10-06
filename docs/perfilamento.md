@@ -17,6 +17,7 @@ Before writing any silver rule, the three bronze tables were profiled to find wh
 | A4 | Some values mean "unknown" or "not applicable" | CAGED `999` = not identified (34 rows); RAIS remuneration `.00` (202,672 rows); 1,374 PNAD rows with null labour-force status, **all** under 14 years old. Education code `80` is valid (postgraduate), not an error | "Unknown" becomes a fake category or drags averages down; turning PNAD nulls into 0 breaks the unemployment rate denominator | "Not identified" codes and RAIS `.00` become NULL; PNAD nulls stay NULL, with the meaning documented in the column comment |
 | A5 | The salary unit in CAGED is unreliable | Monthly salaries of R$ 7.37 (= hourly minimum wage: 7.37 × 220 h = 1,621); "hourly" salaries with a median of R$ 1,113; 1,127 zeros; max R$ 1,362,163. Mean R$ 2,040 vs median R$ 1,658 | Mixing hourly and monthly values; averages pulled up by typos | `salario_mensal` only when unit = month **and** value between **0.3 and 30 minimum wages**; original value and unit kept. Gold always uses the **median** |
 | A6 | Some questions cannot be answered with public microdata | 99.97% of CAGED hires have admission type 97 ("ignored"); RAIS neighbourhood columns hold a single value; RAIS has 586,019 closed contracts out of 1.93 M; PNAD has only 189–284 unemployed people per quarter in the sample | Promising impossible indicators (first job, by neighbourhood); overstating employment by 44%; unreliable fine-grained estimates | Drop constant RAIS columns; add `ativo_31_12`; employment stock counts active contracts only; PNAD only at metro-region level (or large cuts), always weighted; no "first job" indicator |
+| A7 | RAIS IBGE subsector 24 is public administration, which has no company size | 351,914 contracts (18%) with no size; all have public legal nature (1xxx) and CNAE section O. Found by the `tem_porte` expectation in silver | An alarm that always fires hides real gaps; the original Emprega+ comment called code 24 "not in the official table" | Subsector 24 documented in `regras/rais.py`; `tem_porte` only alarms for non-public employers |
 
 ## Details
 
@@ -39,6 +40,10 @@ Monthly-coded salaries (unit 5) by band of minimum wages (MW):
 - **0.3 to 0.5 MW:** legitimate part-time contracts (21.5 h/week on average). A cut at 1 MW would drop real workers.
 - **Effect of the rule:** it keeps 74,773 of 75,576 monthly hires (98.9%); the median stays at R$ 1,658 and the mean moves from R$ 2,045 to R$ 2,010.
 - **Rejected alternative:** converting hourly values to monthly (× 220). It would require guessing each person's working hours, for about 1% of hires.
+
+### A7: found in silver, not in bronze
+
+Not every finding shows up during profiling. This one came from a silver expectation (`tem_porte`) that failed on 351,914 RAIS contracts. All of them belong to IBGE subsector 24, *Administração pública direta e autárquica*: legal nature starting with 1 (public bodies) and CNAE section O (84116 general public administration, 84124 health and education regulation). Company size (micro to large) only applies to companies, so a NULL size is correct for the public sector. The expectation was refined, not the data.
 
 ## Open points
 

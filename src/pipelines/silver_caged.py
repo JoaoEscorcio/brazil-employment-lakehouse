@@ -11,9 +11,9 @@
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 
+from comum.colunas import decimal_virgula, faixa_etaria_col, inteiro, traduzir
 from regras.codigos import RACA_CAGED, SEXO_CAGED
 from regras.rmf import (
-    FAIXAS,
     RMF_MUNICIPIOS,
     SALARIO_MENSAL_MAX_SM,
     SALARIO_MENSAL_MIN_SM,
@@ -21,40 +21,8 @@ from regras.rmf import (
     UNIDADE_SALARIO_MENSAL,
 )
 
+
 RMF_SQL = ",".join(str(c) for c in RMF_MUNICIPIOS)
-
-
-# -----------------------------------------------------------------------------
-# Funções de apoio
-# -----------------------------------------------------------------------------
-
-# A2: números como texto. O CAGED usa vírgula decimal ("1628,51"). try_cast
-# devolve NULL (em vez de quebrar) quando não converte; a expectation
-# "salario_convertido" lá embaixo mede quantos falharam.
-def decimal_virgula(coluna: str):
-    return F.expr(f"try_cast(replace({coluna}, ',', '.') AS DOUBLE)")
-
-
-def inteiro(coluna: str):
-    return F.expr(f"try_cast({coluna} AS INT)")
-
-
-# A3 + A4: código da fonte -> rótulo comum. Códigos fora do dicionário
-# ("não identificado") viram NULL automaticamente.
-def traduzir(coluna: str, dicionario: dict):
-    expr = None
-    for codigo, rotulo in dicionario.items():
-        cond = F.col(coluna) == codigo
-        expr = F.when(cond, rotulo) if expr is None else expr.when(cond, rotulo)
-    return expr
-
-
-# Faixa etária a partir da mesma lista FAIXAS usada nos testes.
-def faixa_etaria_col(idade):
-    expr = F.lit("30+")
-    for inicio, fim, rotulo in reversed(FAIXAS):
-        expr = F.when(idade.between(inicio, fim), rotulo).otherwise(expr)
-    return F.when(idade < 15, "<15").otherwise(expr)
 
 
 # -----------------------------------------------------------------------------
