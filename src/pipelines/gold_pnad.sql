@@ -21,6 +21,32 @@
 -- Qualquer taxa = SUM(componente) / SUM(componente) sobre o filtro desejado.
 -- -----------------------------------------------------------------------------
 CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_mercado_trabalho (
+  ano INT COMMENT 'Ano da pesquisa.',
+  trimestre INT COMMENT 'Trimestre do ano (1 a 4).',
+  area STRING COMMENT '''Fortaleza'' ou ''Demais municípios da RMF''. Somar as duas = RMF.',
+  sexo STRING COMMENT 'Homem, Mulher ou ''Não informado'' (rótulo comum às três fontes).',
+  faixa_etaria STRING COMMENT 'Faixa de idade: <15, 15-17, 18-24, 25-29, 30+ ou ''Não informada''. Jovem = faixas 15-17, 18-24 e 25-29.',
+  raca_grupo STRING COMMENT 'Branca, ''Negra (preta ou parda)'' ou ''Outras ou ignorada''.',
+  pessoas_amostra BIGINT COMMENT 'Pessoas efetivamente entrevistadas (tamanho da amostra), não a população.',
+  desocupados_amostra BIGINT COMMENT 'Desocupados efetivamente entrevistados. Abaixo de 30, a estimativa é pouco confiável.',
+  populacao DOUBLE COMMENT 'População estimada (soma dos pesos). Aditivo: pode somar.',
+  idade_trabalhar DOUBLE COMMENT 'População estimada com 14 anos ou mais. Aditivo.',
+  forca_trabalho DOUBLE COMMENT 'Força de trabalho estimada. Aditivo. Desocupação = SUM(desocupados) / SUM(forca_trabalho).',
+  ocupados DOUBLE COMMENT 'Ocupados estimados. Aditivo.',
+  desocupados DOUBLE COMMENT 'Desocupados estimados. Aditivo.',
+  informais DOUBLE COMMENT 'Ocupados informais estimados (definição BID/MTE). Aditivo. Informalidade = SUM(informais) / SUM(ocupados).',
+  conta_propria DOUBLE COMMENT 'Ocupados por conta própria estimados. Aditivo.',
+  contribuintes_previdencia DOUBLE COMMENT 'Ocupados que contribuem para a previdência, estimados. Aditivo.',
+  subocupados DOUBLE COMMENT 'Subocupados por insuficiência de horas, estimados. Aditivo.',
+  forca_potencial DOUBLE COMMENT 'Força de trabalho potencial estimada. Aditivo.',
+  desalentados DOUBLE COMMENT 'Desalentados estimados. Aditivo.',
+  soma_renda DOUBLE COMMENT 'Soma ponderada do rendimento habitual dos ocupados (R$). Renda média = SUM(soma_renda) / SUM(peso_renda).',
+  peso_renda DOUBLE COMMENT 'Ocupados com rendimento informado (soma dos pesos), denominador da renda média.',
+  soma_renda_real DOUBLE COMMENT 'Soma ponderada do rendimento em R$ do último trimestre. Renda real = SUM(soma_renda_real) / SUM(peso_renda).',
+  soma_renda_informal DOUBLE COMMENT 'Soma ponderada do rendimento dos informais (R$).',
+  peso_renda_informal DOUBLE COMMENT 'Informais com rendimento informado (soma dos pesos).',
+  soma_renda_formal DOUBLE COMMENT 'Soma ponderada do rendimento dos formais (R$).',
+  peso_renda_formal DOUBLE COMMENT 'Formais com rendimento informado (soma dos pesos).',
   CONSTRAINT ocupados_mais_desocupados_igual_forca EXPECT (
     abs(coalesce(ocupados, 0) + coalesce(desocupados, 0) - coalesce(forca_trabalho, 0)) < 1
   )
@@ -73,21 +99,49 @@ GROUP BY ALL;
 
 -- -----------------------------------------------------------------------------
 -- pnad_indicadores: as taxas prontas, para os recortes do painel.
--- Recorte: RMF ou só Fortaleza. Sexo: Todos / Homem / Mulher.
+-- Recorte: RMF, Fortaleza ou demais municípios da RMF. Sexo: Todos / Homem / Mulher.
 -- Público: Todos / Jovens (15 a 29 anos).
 -- Atende: /kpis, /populacao, /informalidade, /informalidade-conta-propria,
 --         /contribuicao-previdenciaria, /subocupacao-desalento, /rendimentos,
 --         /evolucao e /evolucao-rendimento do Emprega+.
 -- -----------------------------------------------------------------------------
 CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_indicadores (
+  recorte STRING COMMENT 'Área geográfica: ''RMF'' (região inteira), ''Fortaleza'' ou ''Demais municípios da RMF''. Não somar recortes: RMF já inclui os outros dois.',
+  ano INT COMMENT 'Ano da pesquisa.',
+  trimestre INT COMMENT 'Trimestre do ano (1 a 4).',
+  sexo STRING COMMENT 'Homem, Mulher ou ''Todos''.',
+  publico STRING COMMENT '''Todos'' ou ''Jovens (15 a 29 anos)''. Filtrar um valor; não somar.',
+  pessoas_amostra BIGINT COMMENT 'Pessoas efetivamente entrevistadas (tamanho da amostra), não a população.',
+  desocupados_amostra BIGINT COMMENT 'Desocupados efetivamente entrevistados. Abaixo de 30, a estimativa é pouco confiável.',
+  pessoas_idade_trabalhar DOUBLE COMMENT 'População estimada com 14 anos ou mais.',
+  pessoas_forca_trabalho DOUBLE COMMENT 'Força de trabalho estimada (ocupados + desocupados).',
+  pessoas_ocupadas DOUBLE COMMENT 'Pessoas ocupadas estimadas (formais e informais).',
+  pessoas_desocupadas DOUBLE COMMENT 'Pessoas desocupadas estimadas (sem trabalho e procurando).',
+  taxa_desocupacao_pct DOUBLE COMMENT 'Taxa de desocupação (%) = desocupados / força de trabalho. Taxa: não somar nem tirar média entre linhas.',
+  taxa_participacao_pct DOUBLE COMMENT 'Taxa de participação (%) = força de trabalho / população de 14+.',
+  nivel_ocupacao_pct DOUBLE COMMENT 'Nível de ocupação (%) = ocupados / população de 14+.',
+  taxa_informalidade_pct DOUBLE COMMENT 'Taxa de informalidade (%) = informais / ocupados (definição BID/MTE).',
+  conta_propria_pct DOUBLE COMMENT 'Ocupados por conta própria / ocupados (%).',
+  contribuicao_previdencia_pct DOUBLE COMMENT 'Ocupados que contribuem para a previdência / ocupados (%).',
+  taxa_subocupacao_pct DOUBLE COMMENT 'Subocupados por insuficiência de horas / ocupados (%).',
+  taxa_desalento_pct DOUBLE COMMENT 'Desalentados / força de trabalho potencial (%).',
+  taxa_subutilizacao_pct DOUBLE COMMENT 'Subutilização (%) = (desocupados + subocupados + força potencial) / (força de trabalho + força potencial).',
+  renda_media_habitual DOUBLE COMMENT 'Rendimento médio habitual do trabalho dos ocupados (R$ nominais).',
+  renda_media_real DOUBLE COMMENT 'Rendimento médio habitual em R$ do trimestre mais recente (descontada a inflação, IPCA).',
+  razao_renda_mulher_homem_pct DOUBLE COMMENT 'Renda média das mulheres / dos homens (%). Faz sentido nas linhas com sexo = ''Todos''.',
+  razao_renda_negra_branca_pct DOUBLE COMMENT 'Renda média de pretos e pardos / de brancos (%).',
+  razao_renda_informal_formal_pct DOUBLE COMMENT 'Renda média dos informais / dos formais (%).',
+  amostra_suficiente BOOLEAN COMMENT 'false quando menos de 30 desocupados foram entrevistados: estimativa pouco confiável.',
   CONSTRAINT taxa_desocupacao_valida EXPECT (taxa_desocupacao_pct BETWEEN 0 AND 100)
 )
-COMMENT 'Indicadores da PNAD Contínua prontos, por trimestre, recorte (RMF / Fortaleza), sexo e público (Todos / Jovens 15-29). Fórmulas do Glossário BID/MTE. Colunas pessoas_* = população estimada (soma de pesos); amostra_suficiente = false quando menos de 30 desocupados foram entrevistados (estimativa pouco confiável).'
+COMMENT 'Indicadores da PNAD Contínua prontos, por trimestre, recorte (RMF / Fortaleza / demais municípios da RMF), sexo e público (Todos / Jovens 15-29). Fórmulas do Glossário BID/MTE. Colunas pessoas_* = população estimada (soma de pesos); amostra_suficiente = false quando menos de 30 desocupados foram entrevistados (estimativa pouco confiável).'
 AS
 WITH base AS (
   SELECT 'RMF' AS recorte, * FROM brazil_employment.gold.pnad_mercado_trabalho
   UNION ALL
   SELECT 'Fortaleza', * FROM brazil_employment.gold.pnad_mercado_trabalho WHERE area = 'Fortaleza'
+  UNION ALL
+  SELECT 'Demais municípios da RMF', * FROM brazil_employment.gold.pnad_mercado_trabalho WHERE area = 'Demais municípios da RMF'
 ),
 publico AS (
   SELECT *,
@@ -157,16 +211,26 @@ FROM agregado;
 
 -- -----------------------------------------------------------------------------
 -- pnad_posicao_ocupacao: que tipo de trabalho as pessoas ocupadas têm.
--- Grão: trimestre x recorte (RMF / Fortaleza) x posição na ocupação (VD4009).
+-- Grão: trimestre x recorte (RMF / Fortaleza / demais municípios) x posição na ocupação (VD4009).
 -- Atende: /categoria-ocupacao.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_posicao_ocupacao
-COMMENT 'Pessoas ocupadas por posição na ocupação (PNAD VD4009), por trimestre e recorte (RMF / Fortaleza). pessoas = soma de peso; pessoas_amostra = entrevistados.'
+CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_posicao_ocupacao (
+  recorte STRING COMMENT 'Área geográfica: ''RMF'' (região inteira), ''Fortaleza'' ou ''Demais municípios da RMF''. Não somar recortes: RMF já inclui os outros dois.',
+  ano INT COMMENT 'Ano da pesquisa.',
+  trimestre INT COMMENT 'Trimestre do ano (1 a 4).',
+  posicao_ocupacao_codigo INT COMMENT 'Código da posição na ocupação (VD4009, 1 a 10).',
+  posicao_ocupacao STRING COMMENT 'Posição na ocupação: com carteira, sem carteira, conta própria, empregador etc.',
+  pessoas DOUBLE COMMENT 'Ocupados estimados nessa posição (soma dos pesos). Aditivo dentro do mesmo recorte e trimestre.',
+  pessoas_amostra BIGINT COMMENT 'Pessoas efetivamente entrevistadas (tamanho da amostra), não a população.'
+)
+COMMENT 'Pessoas ocupadas por posição na ocupação (PNAD VD4009), por trimestre e recorte (RMF / Fortaleza / demais municípios da RMF). pessoas = soma de peso; pessoas_amostra = entrevistados.'
 AS
 WITH ocupados AS (
   SELECT 'RMF' AS recorte, * FROM brazil_employment.silver.pnad_pessoa WHERE condicao_ocupacao = 1
   UNION ALL
   SELECT 'Fortaleza', * FROM brazil_employment.silver.pnad_pessoa WHERE condicao_ocupacao = 1 AND mora_em_fortaleza
+  UNION ALL
+  SELECT 'Demais municípios da RMF', * FROM brazil_employment.silver.pnad_pessoa WHERE condicao_ocupacao = 1 AND NOT mora_em_fortaleza
 )
 SELECT
   recorte, ano, trimestre,

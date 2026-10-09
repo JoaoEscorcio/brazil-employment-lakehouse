@@ -22,6 +22,29 @@
 --         /escolaridade-sexo, /tempo-emprego, /salario-hora e /rendimentos.
 -- -----------------------------------------------------------------------------
 CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_estoque (
+  ano_base INT COMMENT 'Ano de referência da RAIS (situação em 31/12 desse ano).',
+  municipio_codigo INT COMMENT 'Código do município no MTE (IBGE de 7 dígitos sem o dígito verificador; 230440 = Fortaleza).',
+  municipio_nome STRING COMMENT 'Nome do município da Região Metropolitana de Fortaleza (RMF, 19 municípios).',
+  cnae_secao STRING COMMENT 'Seção da CNAE 2.0 (letra A a U) da atividade do empregador.',
+  cnae_secao_descricao STRING COMMENT 'Nome da seção da CNAE 2.0 (setor de atividade), ex.: Comércio, Construção.',
+  porte_oficial STRING COMMENT 'Porte da empresa (Micro, Pequena, Média, Grande) pela metodologia BID/MTE; ''Não se aplica'' para setor público, associações e fundações.',
+  estatutario BOOLEAN COMMENT 'true para servidores públicos estatutários (não existem no CAGED).',
+  faixa_etaria STRING COMMENT 'Faixa de idade: <15, 15-17, 18-24, 25-29, 30+ ou ''Não informada''. Jovem = faixas 15-17, 18-24 e 25-29.',
+  sexo STRING COMMENT 'Homem, Mulher ou ''Não informado'' (rótulo comum às três fontes).',
+  raca_cor STRING COMMENT 'Raça/cor: Branca, Preta, Parda, Amarela, Indígena ou ''Não informada''.',
+  grau_instrucao_codigo INT COMMENT 'Código do grau de instrução (1 = analfabeto ... 7 = médio completo ... 9 = superior completo, 11 = doutorado).',
+  escolaridade STRING COMMENT 'Grau de instrução (ex.: Médio Completo, Superior Completo).',
+  faixa_horas STRING COMMENT 'Faixa de horas semanais contratadas.',
+  faixa_renda_sm STRING COMMENT 'Faixa da remuneração média do ano em salários mínimos de 2025 (R$ 1.518).',
+  vinculos BIGINT COMMENT 'Número de empregos formais (vínculos ativos em 31/12). Aditivo: pode somar.',
+  soma_rem_dezembro DOUBLE COMMENT 'Soma das remunerações de dezembro (R$). Salário médio = SUM(soma_rem_dezembro) / SUM(n_rem_dezembro).',
+  n_rem_dezembro BIGINT COMMENT 'Vínculos com remuneração de dezembro informada (denominador do salário médio).',
+  soma_rem_media DOUBLE COMMENT 'Soma das remunerações médias do ano (R$). Média = SUM(soma_rem_media) / SUM(n_rem_media).',
+  n_rem_media BIGINT COMMENT 'Vínculos com remuneração média informada.',
+  soma_tempo_emprego DOUBLE COMMENT 'Soma do tempo no emprego (meses). Tempo médio = SUM(soma_tempo_emprego) / SUM(n_tempo_emprego).',
+  n_tempo_emprego BIGINT COMMENT 'Vínculos com tempo de emprego informado.',
+  soma_rem_media_com_horas DOUBLE COMMENT 'Remuneração média dos vínculos com horas informadas (R$). Salário-hora = SUM(soma_rem_media_com_horas) / SUM(soma_horas_mes).',
+  soma_horas_mes DECIMAL(25,3) COMMENT 'Horas contratadas por mês (horas semanais x 4,345), denominador do salário-hora.',
   CONSTRAINT contagens_coerentes EXPECT (n_rem_media <= vinculos AND n_rem_dezembro <= vinculos)
 )
 COMMENT 'Estoque de vínculos formais ativos em 31/12 na RMF (RAIS). Grão: município x seção CNAE x porte x estatutário x faixa etária x sexo x raça x escolaridade x faixa de horas x faixa de renda. Médias como soma + contagem: média = SUM(soma_*) / SUM(n_*). Inclui servidores estatutários (o CAGED não).'
@@ -88,7 +111,17 @@ GROUP BY ALL;
 -- rais_ocupacoes: estoque e salário por ocupação (CBO) e grande grupo.
 -- Grão: município x CBO. Atende: /ocupacoes e /grupamento-ocupacao.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_ocupacoes
+CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_ocupacoes (
+  ano_base INT COMMENT 'Ano de referência da RAIS (situação em 31/12 desse ano).',
+  municipio_codigo INT COMMENT 'Código do município no MTE (IBGE de 7 dígitos sem o dígito verificador; 230440 = Fortaleza).',
+  municipio_nome STRING COMMENT 'Nome do município da Região Metropolitana de Fortaleza (RMF, 19 municípios).',
+  cbo_codigo STRING COMMENT 'Código da ocupação na CBO 2002 (6 dígitos).',
+  cbo_descricao STRING COMMENT 'Nome da ocupação na CBO 2002 (ex.: Vendedor de Comercio Varejista).',
+  grande_grupo STRING COMMENT 'Grande grupo ocupacional da CBO (primeiro dígito), ex.: ''5. Trabalhadores dos serviços e vendedores''.',
+  vinculos BIGINT COMMENT 'Empregos formais na ocupação (31/12). Aditivo: pode somar.',
+  soma_rem_dezembro DOUBLE COMMENT 'Soma das remunerações de dezembro (R$). Salário médio = SUM(soma_rem_dezembro) / SUM(n_rem_dezembro).',
+  n_rem_dezembro BIGINT COMMENT 'Vínculos com remuneração de dezembro informada.'
+)
 COMMENT 'Estoque de vínculos ativos em 31/12 na RMF por ocupação (CBO 2002) e grande grupo ocupacional. Grão: município x CBO. Salário médio de dezembro = SUM(soma_rem_dezembro) / SUM(n_rem_dezembro).'
 AS
 SELECT
@@ -128,6 +161,12 @@ GROUP BY ALL;
 -- Atende: /gini e /rotatividade.
 -- -----------------------------------------------------------------------------
 CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_indicadores_municipio (
+  recorte STRING COMMENT 'Município da RMF ou ''RMF'' (região inteira). Ler a linha desejada; não somar.',
+  estoque BIGINT COMMENT 'Empregos formais ativos em 31/12.',
+  admissoes_rotatividade BIGINT COMMENT 'Admissões no ano consideradas na rotatividade (sem estatutários).',
+  desligamentos_rotatividade BIGINT COMMENT 'Desligamentos no ano considerados na rotatividade (sem estatutários, pedidos de demissão, transferências, mortes e aposentadorias).',
+  taxa_rotatividade_pct DECIMAL(26,1) COMMENT 'Taxa de rotatividade descontada (DIEESE), em %: min(admissões, desligamentos) / estoque. Não somar.',
+  gini DOUBLE COMMENT 'Índice de Gini da remuneração (0 = todos ganham igual, 1 = máxima desigualdade). Não somar.',
   CONSTRAINT gini_entre_0_e_1 EXPECT (gini BETWEEN 0 AND 1)
 )
 COMMENT 'Indicadores não aditivos da RAIS por município e para a RMF inteira (linha "RMF"): índice de Gini da remuneração média e taxa de rotatividade descontada (metodologia DIEESE). Ler a linha do recorte desejado; não somar.'
@@ -187,7 +226,15 @@ LEFT JOIN gini g ON g.recorte = r.recorte;
 -- QL > 1: o setor pesa mais no recorte do que no estado.
 -- Atende: /quociente-locacional.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_quociente_locacional
+CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_quociente_locacional (
+  recorte STRING COMMENT 'Município da RMF ou ''RMF'' (região inteira).',
+  cnae_secao STRING COMMENT 'Seção da CNAE 2.0 (letra A a U) da atividade do empregador.',
+  cnae_secao_descricao STRING COMMENT 'Nome da seção da CNAE 2.0 (setor de atividade), ex.: Comércio, Construção.',
+  vinculos_setor BIGINT COMMENT 'Empregos formais do setor no recorte.',
+  participacao_recorte_pct DECIMAL(27,2) COMMENT 'Peso do setor no emprego do recorte (%).',
+  participacao_ceara_pct DECIMAL(27,2) COMMENT 'Peso do setor no emprego do Ceará (%).',
+  quociente_locacional DOUBLE COMMENT 'Quociente locacional: peso do setor no recorte / peso no Ceará. Acima de 1 = recorte especializado no setor.'
+)
 COMMENT 'Quociente locacional por seção CNAE, de cada município da RMF e da RMF inteira (linha "RMF"), em relação ao Ceará (RAIS, vínculos ativos em 31/12). QL > 1 = setor mais concentrado no recorte do que no estado.'
 AS
 WITH ceara AS (
