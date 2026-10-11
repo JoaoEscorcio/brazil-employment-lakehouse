@@ -142,22 +142,24 @@ GROUP BY ALL;
 -- caged_salario_mediano: salário mediano de admissão.
 -- A mediana NÃO é aditiva: a de Fortaleza + a de Caucaia não dão a dos dois.
 -- Por isso ela é pré-calculada para cada combinação de filtro do painel:
--- CUBE gera todas as combinações de período x município x faixa x sexo,
+-- CUBE gera todas as combinações de período x município x faixa x sexo x setor,
 -- e as linhas de "total" de cada dimensão aparecem como 'Todos'.
 -- Considera só admissões do MOV e do FOR (o EXC cancela, não admite) com
 -- salário mensal plausível (achado A5).
--- Atende: o salário de admissão de /kpis (que no Emprega+ era a média).
+-- Atende: o salário de admissão de /kpis (que no Emprega+ era a média)
+-- e o salário por setor (pergunta que o Genie respondia errado).
 -- -----------------------------------------------------------------------------
 CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.caged_salario_mediano (
   periodo STRING COMMENT 'Mês (AAAAMM) ou ''Últimos 12 meses''.',
   municipio_nome STRING COMMENT 'Nome do município ou ''Todos'' (RMF inteira).',
   faixa_etaria STRING COMMENT 'Faixa de idade ou ''Todos''. Jovem = faixas 15-17, 18-24 e 25-29.',
   sexo STRING COMMENT 'Homem, Mulher ou ''Todos''.',
-  salario_mediano DOUBLE COMMENT 'Salário mensal MEDIANO de admissão (R$). NÃO somar nem tirar média: filtrar a combinação desejada de periodo, municipio_nome, faixa_etaria e sexo (''Todos'' = sem filtro).',
+  cnae_secao_descricao STRING COMMENT 'Setor de atividade (seção da CNAE 2.0, ex.: Comércio, Construção) ou ''Todos'' (todos os setores).',
+  salario_mediano DOUBLE COMMENT 'Salário mensal MEDIANO de admissão (R$). NÃO somar nem tirar média: filtrar a combinação desejada de periodo, municipio_nome, faixa_etaria, sexo e cnae_secao_descricao (''Todos'' = sem filtro).',
   admissoes_com_salario BIGINT COMMENT 'Admissões usadas no cálculo da mediana. Abaixo de 30, a mediana é pouco confiável.',
   CONSTRAINT amostra_minima EXPECT (admissoes_com_salario >= 30)
 )
-COMMENT 'Salário mensal MEDIANO de admissão na RMF, pré-calculado para cada combinação de período (mês ou janela de 12 meses), município, faixa etária e sexo. ''Todos'' = sem filtro naquela dimensão. Não somar nem tirar média desta tabela: filtrar a combinação desejada.'
+COMMENT 'Salário mensal MEDIANO de admissão na RMF, pré-calculado para cada combinação de período (mês ou janela de 12 meses), município, faixa etária, sexo e setor (seção CNAE). ''Todos'' = sem filtro naquela dimensão. Não somar nem tirar média desta tabela: filtrar a combinação desejada.'
 AS
 WITH ultima AS (
   SELECT to_date(CAST(MAX(competencia_mov) AS STRING), 'yyyyMM') AS mes
@@ -170,22 +172,26 @@ admissoes AS (
     dm.municipio_nome,
     coalesce(m.faixa_etaria, 'Não informada')    AS faixa_etaria,
     coalesce(m.sexo, 'Não informado')            AS sexo,
+    coalesce(sec.descricao, 'Não informado')     AS cnae_secao_descricao,
     m.salario_mensal
   FROM brazil_employment.silver.caged_movimentacao m
   CROSS JOIN ultima u
   JOIN brazil_employment.silver.dim_municipio dm
     ON dm.municipio_codigo = m.municipio_codigo
+  LEFT JOIN brazil_employment.silver.dim_caged_codigo sec
+    ON sec.dominio = 'secao' AND sec.codigo = m.cnae_secao
   WHERE m.saldo_movimentacao = 1
     AND m.origem_arquivo IN ('MOV', 'FOR')
     AND m.salario_mensal IS NOT NULL
     AND to_date(CAST(m.competencia_mov AS STRING), 'yyyyMM') > add_months(u.mes, -12)
 )
 SELECT
-  CASE WHEN grouping(periodo) = 1        THEN 'Últimos 12 meses' ELSE periodo        END AS periodo,
-  CASE WHEN grouping(municipio_nome) = 1 THEN 'Todos'            ELSE municipio_nome END AS municipio_nome,
-  CASE WHEN grouping(faixa_etaria) = 1   THEN 'Todos'            ELSE faixa_etaria   END AS faixa_etaria,
-  CASE WHEN grouping(sexo) = 1           THEN 'Todos'            ELSE sexo           END AS sexo,
+  CASE WHEN grouping(periodo) = 1              THEN 'Últimos 12 meses' ELSE periodo              END AS periodo,
+  CASE WHEN grouping(municipio_nome) = 1       THEN 'Todos'            ELSE municipio_nome       END AS municipio_nome,
+  CASE WHEN grouping(faixa_etaria) = 1         THEN 'Todos'            ELSE faixa_etaria         END AS faixa_etaria,
+  CASE WHEN grouping(sexo) = 1                 THEN 'Todos'            ELSE sexo                 END AS sexo,
+  CASE WHEN grouping(cnae_secao_descricao) = 1 THEN 'Todos'            ELSE cnae_secao_descricao END AS cnae_secao_descricao,
   ROUND(percentile_approx(salario_mensal, 0.5), 2) AS salario_mediano,
   COUNT(*)                                         AS admissoes_com_salario
 FROM admissoes
-GROUP BY CUBE (periodo, municipio_nome, faixa_etaria, sexo);
+GROUP BY CUBE (periodo, municipio_nome, faixa_etaria, sexo, cnae_secao_descricao);
