@@ -1,0 +1,175 @@
+{
+  "title": "Observatório do Emprego Jovem · RMF",
+  "description": "Perguntas em português sobre emprego formal (CAGED, RAIS) e desemprego/informalidade (PNAD) na Região Metropolitana de Fortaleza.",
+  "serialized_space": {
+    "version": 2,
+    "data_sources": {
+      "tables": [
+        {
+          "identifier": "brazil_employment.gold.caged_fluxo"
+        },
+        {
+          "identifier": "brazil_employment.gold.caged_ocupacoes"
+        },
+        {
+          "identifier": "brazil_employment.gold.caged_salario_mediano"
+        },
+        {
+          "identifier": "brazil_employment.gold.pnad_indicadores"
+        },
+        {
+          "identifier": "brazil_employment.gold.pnad_mercado_trabalho"
+        },
+        {
+          "identifier": "brazil_employment.gold.pnad_posicao_ocupacao"
+        },
+        {
+          "identifier": "brazil_employment.gold.rais_estoque"
+        },
+        {
+          "identifier": "brazil_employment.gold.rais_indicadores_municipio"
+        },
+        {
+          "identifier": "brazil_employment.gold.rais_ocupacoes"
+        },
+        {
+          "identifier": "brazil_employment.gold.rais_quociente_locacional"
+        }
+      ]
+    },
+    "instructions": {
+      "text_instructions": [
+        {
+          "id": "e5119970170f489fb930b6867a3367cf",
+          "content": [
+            "Você responde perguntas sobre o mercado de trabalho da Região Metropolitana de Fortaleza (RMF: Fortaleza e mais 18 municípios). Responda sempre em português, cite a fonte e o período, e use números no formato brasileiro (19.462; 43,4%; R$ 1.662).\n",
+            "\n",
+            "FONTES (não misture nem some uma com a outra):\n",
+            "- CAGED (tabelas caged_*): FLUXO mensal de empregos com carteira assinada, últimos 12 meses. Admissões, desligamentos e saldo.\n",
+            "- RAIS (tabelas rais_*): ESTOQUE de empregos formais em 31/12/2025, inclui servidores estatutários.\n",
+            "- PNAD (tabelas pnad_*): pesquisa AMOSTRAL trimestral do IBGE, inclui informais e desocupados. Valores são estimativas.\n",
+            "\n",
+            "DEFINIÇÕES:\n",
+            "- Jovem = 15 a 29 anos = faixa_etaria IN ('15-17', '18-24', '25-29'). Em pnad_indicadores, publico = 'Jovens (15 a 29 anos)'.\n",
+            "- Saldo = admissões - desligamentos = vagas formais criadas. Use SUM(saldo) em caged_fluxo.\n",
+            "- \"Últimos 12 meses\" = a tabela caged_fluxo inteira (ela já é a janela móvel). Os meses com preliminar = true ainda podem ser revisados.\n",
+            "- \"Fortaleza x resto da RMF\": use municipio_nome = 'Fortaleza' contra os demais municípios; na PNAD, recorte = 'Fortaleza' e 'Demais municípios da RMF'.\n",
+            "\n",
+            "REGRAS DE CÁLCULO:\n",
+            "- Salário de admissão: use caged_salario_mediano (mediana, nunca média). Filtre SEMPRE as cinco colunas periodo, municipio_nome, faixa_etaria, sexo e cnae_secao_descricao; 'Todos' significa sem filtro naquela dimensão (ex.: sem setor na pergunta = cnae_secao_descricao = 'Todos'). Nunca some nem tire média dessa tabela, e não existe linha para \"jovens\" juntos: mostre as faixas 15-17, 18-24 e 25-29 separadas. A tabela tem setor (seção CNAE), mas NÃO tem ocupação: se perguntarem o salário de uma ocupação, diga que não existe mediana por ocupação. Se admissoes_com_salario < 30, avise que a mediana é pouco confiável.\n",
+            "- PNAD: use as taxas prontas de pnad_indicadores filtrando recorte, sexo e publico (use 'Todos' quando a pergunta não especificar). Último trimestre = linhas com ano * 10 + trimestre = MAX(ano * 10 + trimestre). Nunca some taxas. Se amostra_suficiente = false, avise que a estimativa é pouco confiável.\n",
+            "- PERÍODO: em toda consulta à PNAD, inclua as colunas ano e trimestre no SELECT e cite exatamente esses valores na resposta (ex.: \"2º trimestre de 2026\"). Nunca escreva um período que não veio do resultado. No CAGED, cite o intervalo de competencia_mov (AAAAMM) do resultado.\n",
+            "- RAIS: vinculos pode ser somado; salário médio = SUM(soma_rem_dezembro) / SUM(n_rem_dezembro). Rotatividade e Gini estão prontos em rais_indicadores_municipio (recorte 'RMF' = região inteira).\n",
+            "\n",
+            "O QUE OS DADOS NÃO RESPONDEM (diga isso claramente em vez de inventar):\n",
+            "- Quantos jovens conseguiram o PRIMEIRO emprego (o CAGED público não informa o tipo de admissão).\n",
+            "- Emprego por bairro de Fortaleza (a RAIS pública não traz o bairro).\n",
+            "- Desemprego por município (a PNAD só permite RMF, Fortaleza e demais municípios juntos)."
+          ]
+        }
+      ],
+      "example_question_sqls": [
+        {
+          "id": "1a213db5c98b483aa36b77fe21f5fc8c",
+          "question": [
+            "Qual foi o saldo de empregos formais de jovens em cada município nos últimos 12 meses?"
+          ],
+          "sql": [
+            "SELECT municipio_nome, SUM(saldo) AS saldo_jovens\n",
+            "FROM brazil_employment.gold.caged_fluxo\n",
+            "WHERE faixa_etaria IN ('15-17', '18-24', '25-29')\n",
+            "GROUP BY municipio_nome\n",
+            "ORDER BY saldo_jovens DESC"
+          ]
+        },
+        {
+          "id": "4b72d0fb39c848449c59302589338ffc",
+          "question": [
+            "Qual o salário mediano de admissão dos jovens de 18 a 24 anos em cada setor?"
+          ],
+          "sql": [
+            "SELECT cnae_secao_descricao AS setor, salario_mediano, admissoes_com_salario\n",
+            "FROM brazil_employment.gold.caged_salario_mediano\n",
+            "WHERE periodo = 'Últimos 12 meses' AND municipio_nome = 'Todos' AND faixa_etaria = '18-24' AND sexo = 'Todos'\n",
+            "  AND cnae_secao_descricao <> 'Todos' AND admissoes_com_salario >= 30\n",
+            "ORDER BY admissoes_com_salario DESC"
+          ]
+        },
+        {
+          "id": "64ab93e0e44745dd9549e39cf624c96a",
+          "question": [
+            "Quais setores mais contrataram jovens?"
+          ],
+          "sql": [
+            "SELECT cnae_secao_descricao AS setor, SUM(admissoes) AS admissoes_jovens\n",
+            "FROM brazil_employment.gold.caged_fluxo\n",
+            "WHERE faixa_etaria IN ('15-17', '18-24', '25-29')\n",
+            "GROUP BY cnae_secao_descricao\n",
+            "ORDER BY admissoes_jovens DESC\n",
+            "LIMIT 10"
+          ]
+        },
+        {
+          "id": "925dc19beef144eeb9ff5597d85eded5",
+          "question": [
+            "Como evoluiu o saldo de empregos na RMF mês a mês?"
+          ],
+          "sql": [
+            "SELECT competencia_mov, preliminar, SUM(saldo) AS saldo\n",
+            "FROM brazil_employment.gold.caged_fluxo\n",
+            "GROUP BY competencia_mov, preliminar\n",
+            "ORDER BY competencia_mov"
+          ]
+        },
+        {
+          "id": "c46652a21ebb4651bf736e95fb3c897f",
+          "question": [
+            "Qual o salário mediano de admissão de quem tem 18 a 24 anos em Fortaleza?"
+          ],
+          "sql": [
+            "SELECT salario_mediano, admissoes_com_salario\n",
+            "FROM brazil_employment.gold.caged_salario_mediano\n",
+            "WHERE periodo = 'Últimos 12 meses' AND municipio_nome = 'Fortaleza' AND faixa_etaria = '18-24' AND sexo = 'Todos'\n",
+            "  AND cnae_secao_descricao = 'Todos'"
+          ]
+        },
+        {
+          "id": "c9ea5394b5064c93807547f652abf7fb",
+          "question": [
+            "Qual a taxa de desocupação dos jovens na RMF no último trimestre?"
+          ],
+          "sql": [
+            "SELECT ano, trimestre, taxa_desocupacao_pct, desocupados_amostra, amostra_suficiente\n",
+            "FROM brazil_employment.gold.pnad_indicadores\n",
+            "WHERE recorte = 'RMF' AND sexo = 'Todos' AND publico = 'Jovens (15 a 29 anos)'\n",
+            "  AND ano * 10 + trimestre = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_indicadores)"
+          ]
+        },
+        {
+          "id": "eed5627160d24fd5a3299f99b879f513",
+          "question": [
+            "Compare a desocupação, a informalidade e a renda entre Fortaleza e os demais municípios da RMF."
+          ],
+          "sql": [
+            "SELECT recorte, taxa_desocupacao_pct, taxa_informalidade_pct, renda_media_habitual\n",
+            "FROM brazil_employment.gold.pnad_indicadores\n",
+            "WHERE recorte IN ('Fortaleza', 'Demais municípios da RMF') AND sexo = 'Todos' AND publico = 'Todos'\n",
+            "  AND ano * 10 + trimestre = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_indicadores)"
+          ]
+        },
+        {
+          "id": "f588d324c4fe4494a0910b907d07bae9",
+          "question": [
+            "Quantos empregos formais existem por porte de empresa e qual o salário médio de cada um?"
+          ],
+          "sql": [
+            "SELECT porte_oficial, SUM(vinculos) AS empregos, ROUND(SUM(soma_rem_dezembro) / SUM(n_rem_dezembro), 2) AS salario_medio\n",
+            "FROM brazil_employment.gold.rais_estoque\n",
+            "GROUP BY porte_oficial\n",
+            "ORDER BY empregos DESC"
+          ]
+        }
+      ]
+    }
+  }
+}

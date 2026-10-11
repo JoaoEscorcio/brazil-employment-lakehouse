@@ -1,0 +1,3647 @@
+{
+  "datasets": [
+    {
+      "name": "6aa8ead9",
+      "displayName": "ds_fluxo",
+      "queryLines": [
+        "SELECT\n",
+        "  to_date(CAST(competencia_mov AS STRING), 'yyyyMM') AS mes,\n",
+        "  CASE WHEN municipio_nome = 'Fortaleza' THEN 'Fortaleza' ELSE 'Demais municípios da RMF' END AS area,\n",
+        "  municipio_nome,\n",
+        "  CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN 'Jovens (15 a 29)' ELSE 'Demais idades' END AS publico,\n",
+        "  faixa_etaria,\n",
+        "  sexo,\n",
+        "  raca_cor,\n",
+        "  CASE cnae_secao\n",
+        "    WHEN 'A' THEN 'Agropecuária' WHEN 'B' THEN 'Indústrias extrativas'\n",
+        "    WHEN 'C' THEN 'Indústria de transformação' WHEN 'D' THEN 'Eletricidade e gás'\n",
+        "    WHEN 'E' THEN 'Água e saneamento' WHEN 'F' THEN 'Construção'\n",
+        "    WHEN 'G' THEN 'Comércio' WHEN 'H' THEN 'Transporte e armazenagem'\n",
+        "    WHEN 'I' THEN 'Alojamento e alimentação' WHEN 'J' THEN 'Informação e comunicação'\n",
+        "    WHEN 'K' THEN 'Finanças e seguros' WHEN 'L' THEN 'Atividades imobiliárias'\n",
+        "    WHEN 'M' THEN 'Serviços profissionais e técnicos' WHEN 'N' THEN 'Serviços administrativos'\n",
+        "    WHEN 'O' THEN 'Administração pública' WHEN 'P' THEN 'Educação'\n",
+        "    WHEN 'Q' THEN 'Saúde e assistência social' WHEN 'R' THEN 'Artes e recreação'\n",
+        "    WHEN 'S' THEN 'Outros serviços' WHEN 'T' THEN 'Serviços domésticos'\n",
+        "    WHEN 'U' THEN 'Organismos internacionais' ELSE 'Não informado'\n",
+        "  END AS setor,\n",
+        "  escolaridade,\n",
+        "  faixa_salarial_sm,\n",
+        "  admissoes,\n",
+        "  desligamentos,\n",
+        "  saldo,\n",
+        "  CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN admissoes ELSE 0 END AS admissoes_jovens,\n",
+        "  CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN saldo ELSE 0 END AS saldo_jovens\n",
+        "FROM brazil_employment.gold.caged_fluxo\n"
+      ],
+      "columns": [
+        {
+          "displayName": "participacao_jovem",
+          "description": "Admissões de jovens (15 a 29) / total de admissões",
+          "expression": "SUM(`admissoes_jovens`) / SUM(`admissoes`)"
+        }
+      ]
+    },
+    {
+      "name": "bbf2a44f",
+      "displayName": "ds_ocupacoes",
+      "queryLines": [
+        "WITH top AS (\n",
+        "  SELECT cbo_descricao\n",
+        "  FROM brazil_employment.gold.caged_ocupacoes\n",
+        "  GROUP BY cbo_descricao\n",
+        "  ORDER BY SUM(admissoes) DESC\n",
+        "  LIMIT 15\n",
+        ")\n",
+        "SELECT\n",
+        "  to_date(CAST(o.competencia_mov AS STRING), 'yyyyMM') AS mes,\n",
+        "  CASE WHEN o.municipio_nome = 'Fortaleza' THEN 'Fortaleza' ELSE 'Demais municípios da RMF' END AS area,\n",
+        "  o.municipio_nome,\n",
+        "  CASE WHEN o.faixa_etaria IN ('15-17', '18-24', '25-29') THEN 'Jovens (15 a 29)' ELSE 'Demais idades' END AS publico,\n",
+        "  o.sexo,\n",
+        "  regexp_replace(o.cbo_descricao, ' *[(][Dd]esativad[^)]*[)]', '') AS ocupacao,\n",
+        "  o.admissoes,\n",
+        "  o.saldo\n",
+        "FROM brazil_employment.gold.caged_ocupacoes o\n",
+        "WHERE o.cbo_descricao IN (SELECT cbo_descricao FROM top)\n"
+      ]
+    },
+    {
+      "name": "de3da086",
+      "displayName": "ds_salario",
+      "queryLines": [
+        "SELECT faixa_etaria, salario_mediano, admissoes_com_salario\n",
+        "FROM brazil_employment.gold.caged_salario_mediano\n",
+        "WHERE periodo = 'Últimos 12 meses' AND municipio_nome = 'Todos' AND sexo = 'Todos' AND cnae_secao_descricao = 'Todos'\n",
+        "  AND faixa_etaria IN ('15-17', '18-24', '25-29', '30+')\n"
+      ]
+    },
+    {
+      "name": "ds_salario_geral",
+      "displayName": "ds_salario_geral",
+      "queryLines": [
+        "SELECT salario_mediano\n",
+        "FROM brazil_employment.gold.caged_salario_mediano\n",
+        "WHERE periodo = 'Últimos 12 meses' AND municipio_nome = 'Todos' AND sexo = 'Todos' AND faixa_etaria = 'Todos' AND cnae_secao_descricao = 'Todos'\n"
+      ]
+    },
+    {
+      "name": "ds_rais",
+      "displayName": "ds_rais",
+      "queryLines": [
+        "SELECT\n",
+        "  CASE WHEN municipio_nome = 'Fortaleza' THEN 'Fortaleza' ELSE 'Demais municípios da RMF' END AS area,\n",
+        "  municipio_nome,\n",
+        "  CASE cnae_secao\n",
+        "    WHEN 'A' THEN 'Agropecuária' WHEN 'B' THEN 'Indústrias extrativas'\n",
+        "    WHEN 'C' THEN 'Indústria de transformação' WHEN 'D' THEN 'Eletricidade e gás'\n",
+        "    WHEN 'E' THEN 'Água e saneamento' WHEN 'F' THEN 'Construção'\n",
+        "    WHEN 'G' THEN 'Comércio' WHEN 'H' THEN 'Transporte e armazenagem'\n",
+        "    WHEN 'I' THEN 'Alojamento e alimentação' WHEN 'J' THEN 'Informação e comunicação'\n",
+        "    WHEN 'K' THEN 'Finanças e seguros' WHEN 'L' THEN 'Atividades imobiliárias'\n",
+        "    WHEN 'M' THEN 'Serviços profissionais e técnicos' WHEN 'N' THEN 'Serviços administrativos'\n",
+        "    WHEN 'O' THEN 'Administração pública' WHEN 'P' THEN 'Educação'\n",
+        "    WHEN 'Q' THEN 'Saúde e assistência social' WHEN 'R' THEN 'Artes e recreação'\n",
+        "    WHEN 'S' THEN 'Outros serviços' WHEN 'T' THEN 'Serviços domésticos'\n",
+        "    WHEN 'U' THEN 'Organismos internacionais' ELSE 'Não informado'\n",
+        "  END AS setor,\n",
+        "  porte_oficial,\n",
+        "  CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN 'Jovens (15 a 29)' ELSE 'Demais idades' END AS publico,\n",
+        "  faixa_etaria,\n",
+        "  sexo,\n",
+        "  raca_cor,\n",
+        "  escolaridade,\n",
+        "  faixa_horas,\n",
+        "  faixa_renda_sm,\n",
+        "  vinculos,\n",
+        "  CASE WHEN grau_instrucao_codigo >= 7 THEN vinculos ELSE 0 END AS vinculos_medio_ou_mais,\n",
+        "  CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN vinculos ELSE 0 END AS vinculos_jovens,\n",
+        "  soma_rem_dezembro,\n",
+        "  n_rem_dezembro\n",
+        "FROM brazil_employment.gold.rais_estoque\n"
+      ],
+      "columns": [
+        {
+          "displayName": "salario_medio",
+          "description": "Remuneração média de dezembro",
+          "expression": "SUM(`soma_rem_dezembro`) / SUM(`n_rem_dezembro`)"
+        },
+        {
+          "displayName": "pct_medio_ou_mais",
+          "description": "Vínculos com médio completo ou mais / vínculos",
+          "expression": "SUM(`vinculos_medio_ou_mais`) / SUM(`vinculos`)"
+        },
+        {
+          "displayName": "pct_jovens",
+          "description": "Vínculos de jovens (15 a 29) / vínculos",
+          "expression": "SUM(`vinculos_jovens`) / SUM(`vinculos`)"
+        }
+      ]
+    },
+    {
+      "name": "ds_rais_municipios",
+      "displayName": "ds_rais_municipios",
+      "queryLines": [
+        "SELECT recorte AS municipio, estoque, taxa_rotatividade_pct, gini\n",
+        "FROM brazil_employment.gold.rais_indicadores_municipio\n",
+        "ORDER BY CASE WHEN recorte = 'RMF' THEN 0 ELSE 1 END, estoque DESC\n"
+      ]
+    },
+    {
+      "name": "ds_rais_ql",
+      "displayName": "ds_rais_ql",
+      "queryLines": [
+        "SELECT\n",
+        "  CASE cnae_secao\n",
+        "    WHEN 'A' THEN 'Agropecuária' WHEN 'B' THEN 'Indústrias extrativas'\n",
+        "    WHEN 'C' THEN 'Indústria de transformação' WHEN 'D' THEN 'Eletricidade e gás'\n",
+        "    WHEN 'E' THEN 'Água e saneamento' WHEN 'F' THEN 'Construção'\n",
+        "    WHEN 'G' THEN 'Comércio' WHEN 'H' THEN 'Transporte e armazenagem'\n",
+        "    WHEN 'I' THEN 'Alojamento e alimentação' WHEN 'J' THEN 'Informação e comunicação'\n",
+        "    WHEN 'K' THEN 'Finanças e seguros' WHEN 'L' THEN 'Atividades imobiliárias'\n",
+        "    WHEN 'M' THEN 'Serviços profissionais e técnicos' WHEN 'N' THEN 'Serviços administrativos'\n",
+        "    WHEN 'O' THEN 'Administração pública' WHEN 'P' THEN 'Educação'\n",
+        "    WHEN 'Q' THEN 'Saúde e assistência social' WHEN 'R' THEN 'Artes e recreação'\n",
+        "    WHEN 'S' THEN 'Outros serviços' WHEN 'T' THEN 'Serviços domésticos'\n",
+        "    WHEN 'U' THEN 'Organismos internacionais' ELSE 'Não informado'\n",
+        "  END AS setor,\n",
+        "  quociente_locacional,\n",
+        "  vinculos_setor\n",
+        "FROM brazil_employment.gold.rais_quociente_locacional\n",
+        "WHERE recorte = 'RMF' AND vinculos_setor >= 1000\n"
+      ]
+    },
+    {
+      "name": "ds_pnad_ultimo",
+      "displayName": "ds_pnad_ultimo",
+      "queryLines": [
+        "SELECT recorte, sexo, publico, trimestre_rotulo,\n",
+        "  taxa_desocupacao_pct / 100 AS taxa_desocupacao,\n",
+        "  taxa_informalidade_pct / 100 AS taxa_informalidade,\n",
+        "  taxa_subutilizacao_pct / 100 AS taxa_subutilizacao,\n",
+        "  renda_media_real, amostra_suficiente\n",
+        "FROM (\n",
+        "SELECT\n",
+        "  recorte, sexo, publico,\n",
+        "  make_date(ano, trimestre * 3 - 2, 1) AS trimestre_inicio,\n",
+        "  concat(CAST(ano AS STRING), ' T', CAST(trimestre AS STRING)) AS trimestre_rotulo,\n",
+        "  (ano * 10 + trimestre) = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_indicadores) AS ultimo_trimestre,\n",
+        "  taxa_desocupacao_pct, taxa_informalidade_pct, taxa_subutilizacao_pct, taxa_desalento_pct,\n",
+        "  contribuicao_previdencia_pct, conta_propria_pct, taxa_participacao_pct,\n",
+        "  renda_media_habitual, renda_media_real,\n",
+        "  pessoas_forca_trabalho, pessoas_ocupadas, pessoas_desocupadas,\n",
+        "  desocupados_amostra, amostra_suficiente\n",
+        "FROM brazil_employment.gold.pnad_indicadores\n",
+        "WHERE publico <> 'Demais'\n",
+        ")\n",
+        "WHERE ultimo_trimestre\n"
+      ]
+    },
+    {
+      "name": "ds_pnad_serie",
+      "displayName": "ds_pnad_serie",
+      "queryLines": [
+        "SELECT\n",
+        "  recorte, sexo,\n",
+        "  publico AS grupo,\n",
+        "  make_date(ano, trimestre * 3 - 2, 1) AS trimestre_inicio,\n",
+        "  taxa_desocupacao_pct, taxa_informalidade_pct, renda_media_real\n",
+        "FROM brazil_employment.gold.pnad_indicadores\n",
+        "WHERE publico IN ('Todos', 'Jovens (15 a 29 anos)')\n"
+      ]
+    },
+    {
+      "name": "ds_pnad_posicao",
+      "displayName": "ds_pnad_posicao",
+      "queryLines": [
+        "SELECT\n",
+        "  p.recorte, p.posicao_ocupacao, p.pessoas\n",
+        "FROM brazil_employment.gold.pnad_posicao_ocupacao p\n",
+        "WHERE (p.ano * 10 + p.trimestre) = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_posicao_ocupacao)\n"
+      ]
+    },
+    {
+      "name": "ds_comparativo",
+      "displayName": "ds_comparativo",
+      "queryLines": [
+        "WITH caged AS (\n",
+        "  SELECT\n",
+        "    CASE WHEN municipio_nome = 'Fortaleza' THEN 'F' ELSE 'D' END AS area,\n",
+        "    SUM(saldo) AS saldo,\n",
+        "    SUM(CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN saldo ELSE 0 END) AS saldo_jovens,\n",
+        "    SUM(CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN admissoes ELSE 0 END) / SUM(admissoes) AS pct_jovens_adm\n",
+        "  FROM brazil_employment.gold.caged_fluxo\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "admissoes_setor AS (\n",
+        "  SELECT\n",
+        "    CASE WHEN municipio_nome = 'Fortaleza' THEN 'F' ELSE 'D' END AS area,\n",
+        "    cnae_secao_descricao AS setor,\n",
+        "    SUM(admissoes) AS admissoes\n",
+        "  FROM brazil_employment.gold.caged_fluxo\n",
+        "  GROUP BY 1, 2\n",
+        "),\n",
+        "setor AS (\n",
+        "  SELECT area, setor FROM (\n",
+        "    SELECT area, setor, ROW_NUMBER() OVER (PARTITION BY area ORDER BY admissoes DESC) AS posicao\n",
+        "    FROM admissoes_setor\n",
+        "  ) WHERE posicao = 1\n",
+        "),\n",
+        "rais AS (\n",
+        "  SELECT\n",
+        "    CASE WHEN municipio_nome = 'Fortaleza' THEN 'F' ELSE 'D' END AS area,\n",
+        "    SUM(vinculos) AS vinculos,\n",
+        "    SUM(soma_rem_dezembro) / SUM(n_rem_dezembro) AS salario_medio,\n",
+        "    SUM(CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN vinculos ELSE 0 END) / SUM(vinculos) AS pct_jovens\n",
+        "  FROM brazil_employment.gold.rais_estoque\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "pnad AS (\n",
+        "  SELECT\n",
+        "    CASE WHEN recorte = 'Fortaleza' THEN 'F' ELSE 'D' END AS area,\n",
+        "    MAX(CASE WHEN publico = 'Todos' THEN taxa_desocupacao_pct END)                 AS desocupacao,\n",
+        "    MAX(CASE WHEN publico = 'Jovens (15 a 29 anos)' THEN taxa_desocupacao_pct END) AS desocupacao_jovens,\n",
+        "    MAX(CASE WHEN publico = 'Todos' THEN taxa_informalidade_pct END)               AS informalidade,\n",
+        "    MAX(CASE WHEN publico = 'Todos' THEN renda_media_habitual END)                 AS renda,\n",
+        "    MAX(concat(CAST(ano AS STRING), ' T', CAST(trimestre AS STRING)))              AS trimestre\n",
+        "  FROM brazil_employment.gold.pnad_indicadores\n",
+        "  WHERE sexo = 'Todos'\n",
+        "    AND recorte IN ('Fortaleza', 'Demais municípios da RMF')\n",
+        "    AND ano * 10 + trimestre = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_indicadores)\n",
+        "  GROUP BY 1\n",
+        "),\n",
+        "linhas AS (\n",
+        "  SELECT 1 AS ordem, 'CAGED (12 meses)' AS fonte, 'Vagas formais criadas (saldo)' AS indicador, area,\n",
+        "         translate(format_number(saldo, 0), ',.', '.,') AS valor FROM caged\n",
+        "  UNION ALL SELECT 2, 'CAGED (12 meses)', '... das quais de jovens (15 a 29)', area,\n",
+        "         translate(format_number(saldo_jovens, 0), ',.', '.,') FROM caged\n",
+        "  UNION ALL SELECT 3, 'CAGED (12 meses)', 'Jovens nas contratações', area,\n",
+        "         translate(format_number(100 * pct_jovens_adm, 1), ',.', '.,') || '%' FROM caged\n",
+        "  UNION ALL SELECT 4, 'CAGED (12 meses)', 'Setor que mais contrata', area, setor FROM setor\n",
+        "  UNION ALL SELECT 5, 'RAIS (31/12/2025)', 'Empregos formais', area,\n",
+        "         translate(format_number(vinculos, 0), ',.', '.,') FROM rais\n",
+        "  UNION ALL SELECT 6, 'RAIS (31/12/2025)', 'Salário médio (dezembro)', area,\n",
+        "         'R$ ' || translate(format_number(salario_medio, 0), ',.', '.,') FROM rais\n",
+        "  UNION ALL SELECT 7, 'RAIS (31/12/2025)', 'Empregos ocupados por jovens', area,\n",
+        "         translate(format_number(100 * pct_jovens, 1), ',.', '.,') || '%' FROM rais\n",
+        "  UNION ALL SELECT 8, 'PNAD (' || trimestre || ')', 'Desocupação', area,\n",
+        "         translate(format_number(desocupacao, 1), ',.', '.,') || '%' FROM pnad\n",
+        "  UNION ALL SELECT 9, 'PNAD (' || trimestre || ')', 'Desocupação dos jovens', area,\n",
+        "         translate(format_number(desocupacao_jovens, 1), ',.', '.,') || '%' FROM pnad\n",
+        "  UNION ALL SELECT 10, 'PNAD (' || trimestre || ')', 'Informalidade', area,\n",
+        "         translate(format_number(informalidade, 1), ',.', '.,') || '%' FROM pnad\n",
+        "  UNION ALL SELECT 11, 'PNAD (' || trimestre || ')', 'Renda média do trabalho', area,\n",
+        "         'R$ ' || translate(format_number(renda, 0), ',.', '.,') FROM pnad\n",
+        ")\n",
+        "SELECT\n",
+        "  fonte,\n",
+        "  indicador,\n",
+        "  MAX(CASE WHEN area = 'F' THEN valor END) AS fortaleza,\n",
+        "  MAX(CASE WHEN area = 'D' THEN valor END) AS demais_municipios\n",
+        "FROM linhas\n",
+        "GROUP BY ordem, fonte, indicador\n",
+        "ORDER BY ordem\n"
+      ]
+    },
+    {
+      "name": "ds_comp_pnad",
+      "displayName": "ds_comp_pnad",
+      "queryLines": [
+        "SELECT\n",
+        "  recorte AS area,\n",
+        "  CASE WHEN publico = 'Todos' THEN 'Todas as idades' ELSE 'Jovens (15 a 29)' END AS publico,\n",
+        "  taxa_desocupacao_pct,\n",
+        "  taxa_informalidade_pct,\n",
+        "  renda_media_habitual\n",
+        "FROM brazil_employment.gold.pnad_indicadores\n",
+        "WHERE sexo = 'Todos'\n",
+        "  AND recorte IN ('Fortaleza', 'Demais municípios da RMF')\n",
+        "  AND publico IN ('Todos', 'Jovens (15 a 29 anos)')\n",
+        "  AND ano * 10 + trimestre = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_indicadores)\n"
+      ]
+    },
+    {
+      "name": "ds_comp_rais",
+      "displayName": "ds_comp_rais",
+      "queryLines": [
+        "SELECT\n",
+        "  CASE WHEN municipio_nome = 'Fortaleza' THEN 'Fortaleza' ELSE 'Demais municípios da RMF' END AS area,\n",
+        "  faixa_renda_sm,\n",
+        "  SUM(vinculos) AS vinculos\n",
+        "FROM brazil_employment.gold.rais_estoque\n",
+        "GROUP BY 1, 2\n"
+      ]
+    },
+    {
+      "name": "ds_salario_setor",
+      "displayName": "ds_salario_setor",
+      "queryLines": [
+        "WITH s AS (\n",
+        "  SELECT d.codigo AS secao, m.faixa_etaria, m.salario_mediano, m.admissoes_com_salario\n",
+        "  FROM brazil_employment.gold.caged_salario_mediano m\n",
+        "  JOIN brazil_employment.silver.dim_caged_codigo d\n",
+        "    ON d.dominio = 'secao' AND d.descricao = m.cnae_secao_descricao\n",
+        "  WHERE m.periodo = 'Últimos 12 meses' AND m.municipio_nome = 'Todos' AND m.sexo = 'Todos'\n",
+        "    AND m.faixa_etaria IN ('18-24', '30+') AND m.admissoes_com_salario >= 30\n",
+        "),\n",
+        "principais AS (\n",
+        "  SELECT secao FROM s WHERE faixa_etaria = '18-24'\n",
+        "  ORDER BY admissoes_com_salario DESC LIMIT 10\n",
+        ")\n",
+        "SELECT\n",
+        "  CASE secao\n",
+        "    WHEN 'A' THEN 'Agropecuária' WHEN 'B' THEN 'Indústrias extrativas'\n",
+        "    WHEN 'C' THEN 'Indústria de transformação' WHEN 'D' THEN 'Eletricidade e gás'\n",
+        "    WHEN 'E' THEN 'Água e saneamento' WHEN 'F' THEN 'Construção'\n",
+        "    WHEN 'G' THEN 'Comércio' WHEN 'H' THEN 'Transporte e armazenagem'\n",
+        "    WHEN 'I' THEN 'Alojamento e alimentação' WHEN 'J' THEN 'Informação e comunicação'\n",
+        "    WHEN 'K' THEN 'Finanças e seguros' WHEN 'L' THEN 'Atividades imobiliárias'\n",
+        "    WHEN 'M' THEN 'Serviços profissionais e técnicos' WHEN 'N' THEN 'Serviços administrativos'\n",
+        "    WHEN 'O' THEN 'Administração pública' WHEN 'P' THEN 'Educação'\n",
+        "    WHEN 'Q' THEN 'Saúde e assistência social' WHEN 'R' THEN 'Artes e recreação'\n",
+        "    WHEN 'S' THEN 'Outros serviços' WHEN 'T' THEN 'Serviços domésticos'\n",
+        "    WHEN 'U' THEN 'Organismos internacionais' ELSE 'Não informado'\n",
+        "  END AS setor,\n",
+        "  CASE faixa_etaria WHEN '18-24' THEN '18 a 24 anos' ELSE '30 anos ou mais' END AS idade,\n",
+        "  salario_mediano,\n",
+        "  admissoes_com_salario\n",
+        "FROM s\n",
+        "WHERE secao IN (SELECT secao FROM principais)\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "comparacao",
+      "displayName": "Fortaleza x RMF",
+      "layout": [
+        {
+          "widget": {
+            "name": "comp_titulo",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Fortaleza x demais municípios da Região Metropolitana"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "comp_destaque",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Na capital e no entorno, **as vagas novas ficam com os jovens**. Fora de Fortaleza o jovem tem mais espaço no emprego formal, puxado pela indústria, **mas o trabalho paga quase a metade e é mais informal**. Na capital, o desemprego jovem é o mais alto da região."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "comp_tabela",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_comparativo",
+                  "fields": [
+                    {
+                      "name": "fonte",
+                      "expression": "`fonte`"
+                    },
+                    {
+                      "name": "indicador",
+                      "expression": "`indicador`"
+                    },
+                    {
+                      "name": "fortaleza",
+                      "expression": "`fortaleza`"
+                    },
+                    {
+                      "name": "demais_municipios",
+                      "expression": "`demais_municipios`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "fonte",
+                    "displayName": "Fonte"
+                  },
+                  {
+                    "fieldName": "indicador",
+                    "displayName": "Indicador"
+                  },
+                  {
+                    "fieldName": "fortaleza",
+                    "displayName": "Fortaleza"
+                  },
+                  {
+                    "fieldName": "demais_municipios",
+                    "displayName": "Demais 18 municípios"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "O retrato em uma tabela",
+                "showDescription": true,
+                "description": "Cada fonte no seu período mais recente."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "comp_desocupacao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_comp_pnad",
+                  "fields": [
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    },
+                    {
+                      "name": "max(taxa_desocupacao_pct)",
+                      "expression": "MAX(`taxa_desocupacao_pct`)"
+                    },
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "area",
+                  "displayName": "Área",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "Fortaleza",
+                        "Demais municípios da RMF"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "max(taxa_desocupacao_pct)",
+                  "displayName": "Desocupação (%)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "publico",
+                  "displayName": "Público",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Jovens (15 a 29)",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Todas as idades",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "mark": {
+                "layout": "group"
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Desocupação (%): jovens x todas as idades",
+                "showDescription": true,
+                "description": "PNAD, último trimestre. Fora de Fortaleza, o jovem tem amostra menor: estimativa menos precisa."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "comp_renda",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_comp_pnad",
+                  "fields": [
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    },
+                    {
+                      "name": "max(renda_media_habitual)",
+                      "expression": "MAX(`renda_media_habitual`)"
+                    },
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "area",
+                  "displayName": "Área",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "Fortaleza",
+                        "Demais municípios da RMF"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "max(renda_media_habitual)",
+                  "displayName": "Renda média",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "publico",
+                  "displayName": "Público",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Jovens (15 a 29)",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Todas as idades",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "mark": {
+                "layout": "group"
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Renda média do trabalho: jovens x todas as idades",
+                "showDescription": true,
+                "description": "PNAD, último trimestre, formais e informais."
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 11,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "comp_saldo",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "monthly(mes)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `mes`)"
+                    },
+                    {
+                      "name": "sum(saldo)",
+                      "expression": "SUM(`saldo`)"
+                    },
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(mes)",
+                  "displayName": "Mês",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(saldo)",
+                  "displayName": "Saldo",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "area",
+                  "displayName": "Área",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Fortaleza",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Demais municípios da RMF",
+                        "color": "#E69F00"
+                      }
+                    ]
+                  }
+                }
+              },
+              "mark": {
+                "layout": "group"
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Vagas formais criadas por mês",
+                "showDescription": true,
+                "description": "CAGED: saldo de admissões e desligamentos."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 7,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "comp_renda_rais",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_comp_rais",
+                  "fields": [
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    },
+                    {
+                      "name": "sum(vinculos)",
+                      "expression": "SUM(`vinculos`)"
+                    },
+                    {
+                      "name": "faixa_renda_sm",
+                      "expression": "`faixa_renda_sm`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "area",
+                  "displayName": "Área",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "Fortaleza",
+                        "Demais municípios da RMF"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(vinculos)",
+                  "displayName": "Empregos",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "faixa_renda_sm",
+                  "displayName": "Remuneração",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "1. Até 1 SM",
+                        "2. 1 a 1,5 SM",
+                        "3. 1,5 a 2 SM",
+                        "4. 2 a 3 SM",
+                        "5. 3 a 5 SM",
+                        "6. Mais de 5 SM",
+                        "Sem remuneração informada"
+                      ]
+                    },
+                    "mappings": [
+                      {
+                        "value": "Sem remuneração informada",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "mark": {
+                "layout": "stack-100"
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Como se distribuem os salários formais",
+                "showDescription": true,
+                "description": "RAIS 2025: parte dos empregos em cada faixa de salário mínimo."
+              }
+            }
+          },
+          "position": {
+            "x": 7,
+            "y": 18,
+            "width": 5,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "comp_fonte",
+            "multilineTextboxSpec": {
+              "lines": [
+                "*Fontes: Novo CAGED e RAIS (MTE), PNAD Contínua (IBGE). \"Demais municípios\": os outros 18 municípios da RMF (LC Estadual 154/2015). A PNAD não permite separar cada município: por isso a comparação é capital x entorno.*"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 25,
+            "width": 12,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "9bac57c8",
+      "displayName": "Emprego formal (CAGED)",
+      "layout": [
+        {
+          "widget": {
+            "name": "titulo",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Emprego formal na Região Metropolitana de Fortaleza"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "destaque",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Em 12 meses, **praticamente todo o saldo de empregos com carteira da RMF foi de jovens de 15 a 29 anos.** Para quem tem 30 anos ou mais, o saldo ficou perto de zero."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filtro_periodo",
+            "queries": [
+              {
+                "name": "q_filtro_periodo_0",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "mes",
+                      "expression": "`mes`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_filtro_periodo_1",
+                "query": {
+                  "datasetName": "bbf2a44f",
+                  "fields": [
+                    {
+                      "name": "mes",
+                      "expression": "`mes`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "mes",
+                    "displayName": "Período",
+                    "queryName": "q_filtro_periodo_0"
+                  },
+                  {
+                    "fieldName": "mes",
+                    "displayName": "Período",
+                    "queryName": "q_filtro_periodo_1"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Período"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filtro_municipio",
+            "queries": [
+              {
+                "name": "q_filtro_municipio_0",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "municipio_nome",
+                      "expression": "`municipio_nome`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_filtro_municipio_1",
+                "query": {
+                  "datasetName": "bbf2a44f",
+                  "fields": [
+                    {
+                      "name": "municipio_nome",
+                      "expression": "`municipio_nome`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "municipio_nome",
+                    "displayName": "Município",
+                    "queryName": "q_filtro_municipio_0"
+                  },
+                  {
+                    "fieldName": "municipio_nome",
+                    "displayName": "Município",
+                    "queryName": "q_filtro_municipio_1"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Município"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filtro_publico",
+            "queries": [
+              {
+                "name": "q_filtro_publico_0",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_filtro_publico_1",
+                "query": {
+                  "datasetName": "bbf2a44f",
+                  "fields": [
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "publico",
+                    "displayName": "Público",
+                    "queryName": "q_filtro_publico_0"
+                  },
+                  {
+                    "fieldName": "publico",
+                    "displayName": "Público",
+                    "queryName": "q_filtro_publico_1"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Público"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filtro_sexo",
+            "queries": [
+              {
+                "name": "q_filtro_sexo_0",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "sexo",
+                      "expression": "`sexo`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_filtro_sexo_1",
+                "query": {
+                  "datasetName": "bbf2a44f",
+                  "fields": [
+                    {
+                      "name": "sexo",
+                      "expression": "`sexo`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "sexo",
+                    "displayName": "Sexo",
+                    "queryName": "q_filtro_sexo_0"
+                  },
+                  {
+                    "fieldName": "sexo",
+                    "displayName": "Sexo",
+                    "queryName": "q_filtro_sexo_1"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Sexo"
+              }
+            }
+          },
+          "position": {
+            "x": 10,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_saldo",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "sum(saldo)",
+                      "expression": "SUM(`saldo`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(saldo)",
+                  "displayName": "Vagas formais criadas",
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Vagas formais criadas",
+                "showDescription": true,
+                "description": "Saldo: admissões menos desligamentos"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_saldo_jovens",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "sum(saldo_jovens)",
+                      "expression": "SUM(`saldo_jovens`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(saldo_jovens)",
+                  "displayName": "Vagas criadas para jovens",
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Vagas criadas para jovens",
+                "showDescription": true,
+                "description": "Saldo de quem tem 15 a 29 anos"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_participacao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "measure(participacao_jovem)",
+                      "expression": "MEASURE(`participacao_jovem`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(participacao_jovem)",
+                  "displayName": "Jovens nas contratações",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Jovens nas contratações",
+                "showDescription": true,
+                "description": "Parte das admissões que foi de jovens"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_salario",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_salario_geral",
+                  "fields": [
+                    {
+                      "name": "salario_mediano",
+                      "expression": "`salario_mediano`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "salario_mediano",
+                  "displayName": "Salário de entrada",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Salário de entrada",
+                "showDescription": true,
+                "description": "Mediana da RMF em 12 meses (não muda com filtros)"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "saldo_mensal",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "monthly(mes)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `mes`)"
+                    },
+                    {
+                      "name": "sum(saldo)",
+                      "expression": "SUM(`saldo`)"
+                    },
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(mes)",
+                  "displayName": "Mês",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(saldo)",
+                  "displayName": "Saldo",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "publico",
+                  "displayName": "Público",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Jovens (15 a 29)",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Demais idades",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "mark": {
+                "layout": "group"
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Saldo de empregos por mês: jovens x demais idades",
+                "showDescription": true,
+                "description": "Dezembro fica negativo todo ano (fim dos contratos temporários). Abril a junho/2026 ainda podem ser revisados pelo MTE."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "secao_onde",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Onde e em quê estão as vagas"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "setores",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "setor",
+                      "expression": "`setor`"
+                    },
+                    {
+                      "name": "sum(admissoes)",
+                      "expression": "SUM(`admissoes`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(admissoes)",
+                  "displayName": "Admissões",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "setor",
+                  "displayName": "Setor",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Setores que mais contratam",
+                "showDescription": true,
+                "description": "Admissões no período, por seção da CNAE"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 16,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "ocupacoes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bbf2a44f",
+                  "fields": [
+                    {
+                      "name": "ocupacao",
+                      "expression": "`ocupacao`"
+                    },
+                    {
+                      "name": "sum(admissoes)",
+                      "expression": "SUM(`admissoes`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(admissoes)",
+                  "displayName": "Admissões",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "ocupacao",
+                  "displayName": "Ocupação",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "As 15 ocupações que mais contratam",
+                "showDescription": true,
+                "description": "As 15 com mais admissões na RMF em 12 meses"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 16,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "secao_salario",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Quanto se ganha ao entrar"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 26,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "faixa_salarial",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "faixa_salarial_sm",
+                      "expression": "`faixa_salarial_sm`"
+                    },
+                    {
+                      "name": "sum(admissoes)",
+                      "expression": "SUM(`admissoes`)"
+                    },
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "faixa_salarial_sm",
+                  "displayName": "Salário de admissão",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "1. Até 1 SM",
+                        "2. 1 a 1,5 SM",
+                        "3. 1,5 a 2 SM",
+                        "4. 2 a 3 SM",
+                        "5. 3 a 5 SM",
+                        "6. Mais de 5 SM",
+                        "Sem salário mensal"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(admissoes)",
+                  "displayName": "Admissões",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "publico",
+                  "displayName": "Público",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Jovens (15 a 29)",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Demais idades",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "mark": {
+                "layout": "group"
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Admissões por faixa salarial, em salários mínimos",
+                "showDescription": true,
+                "description": "SM do ano da admissão: R$ 1.518 (2025) e R$ 1.621 (2026)."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 27,
+            "width": 7,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "salario_mediano",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "de3da086",
+                  "fields": [
+                    {
+                      "name": "faixa_etaria",
+                      "expression": "`faixa_etaria`"
+                    },
+                    {
+                      "name": "salario_mediano",
+                      "expression": "`salario_mediano`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "faixa_etaria",
+                  "displayName": "Idade",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "15-17",
+                        "18-24",
+                        "25-29",
+                        "30+"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "salario_mediano",
+                  "displayName": "Salário mediano",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Salário mediano de entrada por idade",
+                "showDescription": true,
+                "description": "Quem tem 18 a 24 anos entra, em geral, com exatamente um salário mínimo."
+              }
+            }
+          },
+          "position": {
+            "x": 7,
+            "y": 27,
+            "width": 5,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "fonte",
+            "multilineTextboxSpec": {
+              "lines": [
+                "*Fonte: Novo CAGED/MTE, microdados dos 19 municípios da RMF. Movimentações fora do prazo e exclusões são atribuídas ao mês em que ocorreram; exclusões entram com sinal invertido (Nota Técnica 11/2021). Salário: mediana dos valores mensais plausíveis (0,3 a 30 salários mínimos).*"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 45,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filtro_area",
+            "queries": [
+              {
+                "name": "q_filtro_area_0",
+                "query": {
+                  "datasetName": "6aa8ead9",
+                  "fields": [
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_filtro_area_1",
+                "query": {
+                  "datasetName": "bbf2a44f",
+                  "fields": [
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "area",
+                    "displayName": "Área",
+                    "queryName": "q_filtro_area_0"
+                  },
+                  {
+                    "fieldName": "area",
+                    "displayName": "Área",
+                    "queryName": "q_filtro_area_1"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Área"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "salario_setor",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_salario_setor",
+                  "fields": [
+                    {
+                      "name": "setor",
+                      "expression": "`setor`"
+                    },
+                    {
+                      "name": "idade",
+                      "expression": "`idade`"
+                    },
+                    {
+                      "name": "salario_mediano",
+                      "expression": "`salario_mediano`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "salario_mediano",
+                  "displayName": "Salário mediano",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "setor",
+                  "displayName": "Setor",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "idade",
+                  "displayName": "Idade",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "18 a 24 anos",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "30 anos ou mais",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "mark": {
+                "layout": "group"
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Salário mediano de entrada por setor: jovens x 30 anos ou mais",
+                "showDescription": true,
+                "description": "Últimos 12 meses, RMF. Os 10 setores que mais contratam jovens de 18 a 24 anos. Na maioria deles o jovem entra com exatamente um salário mínimo."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 35,
+            "width": 12,
+            "height": 10
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "rais",
+      "displayName": "Estoque formal (RAIS)",
+      "layout": [
+        {
+          "widget": {
+            "name": "rais_titulo",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Empregos formais existentes na RMF (RAIS, 31/12/2025)"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_destaque",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### A RAIS mostra o **estoque**: quantos empregos com vínculo formal existiam no fim do ano, quem os ocupa e quanto pagam. Inclui servidores públicos, que o CAGED não cobre."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_f_municipio",
+            "queries": [
+              {
+                "name": "q_rais_f_municipio_0",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "municipio_nome",
+                      "expression": "`municipio_nome`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "municipio_nome",
+                    "displayName": "Município",
+                    "queryName": "q_rais_f_municipio_0"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Município"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_f_publico",
+            "queries": [
+              {
+                "name": "q_rais_f_publico_0",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "publico",
+                    "displayName": "Público",
+                    "queryName": "q_rais_f_publico_0"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Público"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_f_sexo",
+            "queries": [
+              {
+                "name": "q_rais_f_sexo_0",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "sexo",
+                      "expression": "`sexo`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "sexo",
+                    "displayName": "Sexo",
+                    "queryName": "q_rais_f_sexo_0"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Sexo"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_kpi_vinculos",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "sum(vinculos)",
+                      "expression": "SUM(`vinculos`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(vinculos)",
+                  "displayName": "Empregos formais",
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Empregos formais",
+                "showDescription": true,
+                "description": "Vínculos ativos em 31/12/2025"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_kpi_jovens",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "measure(pct_jovens)",
+                      "expression": "MEASURE(`pct_jovens`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(pct_jovens)",
+                  "displayName": "Ocupados por jovens",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Ocupados por jovens",
+                "showDescription": true,
+                "description": "Parte dos vínculos de quem tem 15 a 29 anos"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_kpi_salario",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "measure(salario_medio)",
+                      "expression": "MEASURE(`salario_medio`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(salario_medio)",
+                  "displayName": "Salário médio",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Salário médio",
+                "showDescription": true,
+                "description": "Remuneração média de dezembro/2025"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_kpi_escolaridade",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "measure(pct_medio_ou_mais)",
+                      "expression": "MEASURE(`pct_medio_ou_mais`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(pct_medio_ou_mais)",
+                  "displayName": "Com ensino médio ou mais",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Com ensino médio ou mais",
+                "showDescription": true,
+                "description": "Parte dos vínculos com médio completo ou mais"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_secao_onde",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Onde estão os empregos"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_setores",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "setor",
+                      "expression": "`setor`"
+                    },
+                    {
+                      "name": "sum(vinculos)",
+                      "expression": "SUM(`vinculos`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(vinculos)",
+                  "displayName": "Vínculos",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "setor",
+                  "displayName": "Setor",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Empregos por setor",
+                "showDescription": true,
+                "description": "Vínculos ativos, por seção da CNAE"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_porte",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "porte_oficial",
+                      "expression": "`porte_oficial`"
+                    },
+                    {
+                      "name": "sum(vinculos)",
+                      "expression": "SUM(`vinculos`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "porte_oficial",
+                  "displayName": "Porte",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "Micro",
+                        "Pequena",
+                        "Média",
+                        "Grande",
+                        "Não se aplica"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(vinculos)",
+                  "displayName": "Vínculos",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Empregos por porte da empresa",
+                "showDescription": true,
+                "description": "Porte oficial BID/MTE. 'Não se aplica': setor público, associações e fundações."
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_renda",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "faixa_renda_sm",
+                      "expression": "`faixa_renda_sm`"
+                    },
+                    {
+                      "name": "sum(vinculos)",
+                      "expression": "SUM(`vinculos`)"
+                    },
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "faixa_renda_sm",
+                  "displayName": "Remuneração",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "1. Até 1 SM",
+                        "2. 1 a 1,5 SM",
+                        "3. 1,5 a 2 SM",
+                        "4. 2 a 3 SM",
+                        "5. 3 a 5 SM",
+                        "6. Mais de 5 SM",
+                        "Sem remuneração informada"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(vinculos)",
+                  "displayName": "Vínculos",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "publico",
+                  "displayName": "Público",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Jovens (15 a 29)",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Demais idades",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Empregos por faixa de remuneração",
+                "showDescription": true,
+                "description": "Em salários mínimos de 2025 (R$ 1.518)"
+              },
+              "mark": {
+                "layout": "group"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 14,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_secao_qualidade",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Desigualdade, rotatividade e especialização"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 19,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_municipios",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais_municipios",
+                  "fields": [
+                    {
+                      "name": "municipio",
+                      "expression": "`municipio`"
+                    },
+                    {
+                      "name": "estoque",
+                      "expression": "`estoque`"
+                    },
+                    {
+                      "name": "taxa_rotatividade_pct",
+                      "expression": "`taxa_rotatividade_pct`"
+                    },
+                    {
+                      "name": "gini",
+                      "expression": "`gini`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "municipio",
+                    "displayName": "Município"
+                  },
+                  {
+                    "fieldName": "estoque",
+                    "displayName": "Empregos",
+                    "format": {
+                      "type": "number",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 1
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "taxa_rotatividade_pct",
+                    "displayName": "Rotatividade (%)"
+                  },
+                  {
+                    "fieldName": "gini",
+                    "displayName": "Gini"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Rotatividade e desigualdade por município",
+                "showDescription": true,
+                "description": "Rotatividade DIEESE (% do estoque trocado no ano). Gini: 0 = salários iguais, 1 = máxima desigualdade."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 20,
+            "width": 6,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_ql",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_rais_ql",
+                  "fields": [
+                    {
+                      "name": "setor",
+                      "expression": "`setor`"
+                    },
+                    {
+                      "name": "max(quociente_locacional)",
+                      "expression": "MAX(`quociente_locacional`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "max(quociente_locacional)",
+                  "displayName": "Quociente locacional",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "setor",
+                  "displayName": "Setor",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Em que a RMF é especializada",
+                "showDescription": true,
+                "description": "Quociente locacional vs. Ceará: acima de 1 = setor pesa mais na RMF do que no estado"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 20,
+            "width": 6,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_fonte",
+            "multilineTextboxSpec": {
+              "lines": [
+                "*Fonte: RAIS Vínculos 2025 (MTE), 19 municípios da RMF; quociente locacional com a RAIS do Ceará inteiro. Porte e rotatividade pela metodologia do painel BID/MTE e do DIEESE. Remuneração não informada fica fora das médias.*"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 29,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "rais_f_area",
+            "queries": [
+              {
+                "name": "q_rais_f_area_0",
+                "query": {
+                  "datasetName": "ds_rais",
+                  "fields": [
+                    {
+                      "name": "area",
+                      "expression": "`area`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "area",
+                    "displayName": "Área",
+                    "queryName": "q_rais_f_area_0"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Área"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "pnad",
+      "displayName": "Desemprego e informalidade (PNAD)",
+      "layout": [
+        {
+          "widget": {
+            "name": "pnad_titulo",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Desemprego, informalidade e renda (PNAD Contínua)"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_destaque",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Entre os jovens de 15 a 29 anos, **a desocupação é quase o dobro** da média da região, em todos os trimestres. A PNAD enxerga também quem trabalha sem carteira e quem procura emprego."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_f_recorte",
+            "queries": [
+              {
+                "name": "q_pnad_f_recorte_0",
+                "query": {
+                  "datasetName": "ds_pnad_ultimo",
+                  "fields": [
+                    {
+                      "name": "recorte",
+                      "expression": "`recorte`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_pnad_f_recorte_1",
+                "query": {
+                  "datasetName": "ds_pnad_serie",
+                  "fields": [
+                    {
+                      "name": "recorte",
+                      "expression": "`recorte`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_pnad_f_recorte_2",
+                "query": {
+                  "datasetName": "ds_pnad_posicao",
+                  "fields": [
+                    {
+                      "name": "recorte",
+                      "expression": "`recorte`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "recorte",
+                    "displayName": "Área",
+                    "queryName": "q_pnad_f_recorte_0"
+                  },
+                  {
+                    "fieldName": "recorte",
+                    "displayName": "Área",
+                    "queryName": "q_pnad_f_recorte_1"
+                  },
+                  {
+                    "fieldName": "recorte",
+                    "displayName": "Área",
+                    "queryName": "q_pnad_f_recorte_2"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Área"
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "RMF"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_f_sexo",
+            "queries": [
+              {
+                "name": "q_pnad_f_sexo_0",
+                "query": {
+                  "datasetName": "ds_pnad_ultimo",
+                  "fields": [
+                    {
+                      "name": "sexo",
+                      "expression": "`sexo`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_pnad_f_sexo_1",
+                "query": {
+                  "datasetName": "ds_pnad_serie",
+                  "fields": [
+                    {
+                      "name": "sexo",
+                      "expression": "`sexo`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "sexo",
+                    "displayName": "Sexo",
+                    "queryName": "q_pnad_f_sexo_0"
+                  },
+                  {
+                    "fieldName": "sexo",
+                    "displayName": "Sexo",
+                    "queryName": "q_pnad_f_sexo_1"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Sexo"
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "Todos"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_f_publico",
+            "queries": [
+              {
+                "name": "q_pnad_f_publico_0",
+                "query": {
+                  "datasetName": "ds_pnad_ultimo",
+                  "fields": [
+                    {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "publico",
+                    "displayName": "Público",
+                    "queryName": "q_pnad_f_publico_0"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Público"
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "Todos"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_kpi_desocupacao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pnad_ultimo",
+                  "fields": [
+                    {
+                      "name": "max(taxa_desocupacao)",
+                      "expression": "MAX(`taxa_desocupacao`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(taxa_desocupacao)",
+                  "displayName": "Desocupação",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Desocupação",
+                "showDescription": true,
+                "description": "Último trimestre: desocupados / força de trabalho"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_kpi_informalidade",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pnad_ultimo",
+                  "fields": [
+                    {
+                      "name": "max(taxa_informalidade)",
+                      "expression": "MAX(`taxa_informalidade`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(taxa_informalidade)",
+                  "displayName": "Informalidade",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Informalidade",
+                "showDescription": true,
+                "description": "Último trimestre: informais / ocupados (BID/MTE)"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_kpi_subutilizacao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pnad_ultimo",
+                  "fields": [
+                    {
+                      "name": "max(taxa_subutilizacao)",
+                      "expression": "MAX(`taxa_subutilizacao`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(taxa_subutilizacao)",
+                  "displayName": "Subutilização",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Subutilização",
+                "showDescription": true,
+                "description": "Desocupados + subocupados + força potencial"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_kpi_renda",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pnad_ultimo",
+                  "fields": [
+                    {
+                      "name": "max(renda_media_real)",
+                      "expression": "MAX(`renda_media_real`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(renda_media_real)",
+                  "displayName": "Renda média do trabalho",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Renda média do trabalho",
+                "showDescription": true,
+                "description": "Último trimestre, rendimento habitual dos ocupados"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 5,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_serie_desocupacao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pnad_serie",
+                  "fields": [
+                    {
+                      "name": "trimestre_inicio",
+                      "expression": "`trimestre_inicio`"
+                    },
+                    {
+                      "name": "max(taxa_desocupacao_pct)",
+                      "expression": "MAX(`taxa_desocupacao_pct`)"
+                    },
+                    {
+                      "name": "grupo",
+                      "expression": "`grupo`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "trimestre_inicio",
+                  "displayName": "Trimestre",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "max(taxa_desocupacao_pct)",
+                  "displayName": "Desocupação (%)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "grupo",
+                  "displayName": "Público",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Jovens (15 a 29 anos)",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Todos",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Taxa de desocupação (%): jovens x todos",
+                "showDescription": true,
+                "description": "Por trimestre"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_serie_informalidade",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pnad_serie",
+                  "fields": [
+                    {
+                      "name": "trimestre_inicio",
+                      "expression": "`trimestre_inicio`"
+                    },
+                    {
+                      "name": "max(taxa_informalidade_pct)",
+                      "expression": "MAX(`taxa_informalidade_pct`)"
+                    },
+                    {
+                      "name": "grupo",
+                      "expression": "`grupo`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "trimestre_inicio",
+                  "displayName": "Trimestre",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "max(taxa_informalidade_pct)",
+                  "displayName": "Informalidade (%)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "grupo",
+                  "displayName": "Público",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Jovens (15 a 29 anos)",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Todos",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Taxa de informalidade (%): jovens x todos",
+                "showDescription": true,
+                "description": "Por trimestre"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 8,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_serie_renda",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pnad_serie",
+                  "fields": [
+                    {
+                      "name": "trimestre_inicio",
+                      "expression": "`trimestre_inicio`"
+                    },
+                    {
+                      "name": "max(renda_media_real)",
+                      "expression": "MAX(`renda_media_real`)"
+                    },
+                    {
+                      "name": "grupo",
+                      "expression": "`grupo`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "trimestre_inicio",
+                  "displayName": "Trimestre",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "max(renda_media_real)",
+                  "displayName": "Renda real",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "BRL",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "grupo",
+                  "displayName": "Público",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Jovens (15 a 29 anos)",
+                        "color": "#0072B2"
+                      },
+                      {
+                        "value": "Todos",
+                        "color": "#9AA5B1"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Renda média real do trabalho",
+                "showDescription": true,
+                "description": "Descontada a inflação (IPCA, base: último trimestre)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_posicao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pnad_posicao",
+                  "fields": [
+                    {
+                      "name": "posicao_ocupacao",
+                      "expression": "`posicao_ocupacao`"
+                    },
+                    {
+                      "name": "sum(pessoas)",
+                      "expression": "SUM(`pessoas`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(pessoas)",
+                  "displayName": "Pessoas",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "posicao_ocupacao",
+                  "displayName": "Posição",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Que tipo de trabalho as pessoas têm",
+                "showDescription": true,
+                "description": "Ocupados por posição na ocupação, último trimestre"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 15,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "pnad_fonte",
+            "multilineTextboxSpec": {
+              "lines": [
+                "*Fonte: PNAD Contínua (IBGE), Região Metropolitana de Fortaleza. É uma pesquisa amostral: os valores são estimativas. Recortes com menos de 30 desocupados entrevistados são pouco confiáveis; por isso não há corte por município além de Fortaleza.*"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 22,
+            "width": 12,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#F4F6F8",
+        "dark": "#161B21"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#1E252D"
+      },
+      "widgetBorderColor": {
+        "light": "#FFFFFF",
+        "dark": "#1E252D"
+      },
+      "fontColor": {
+        "light": "#1B2733",
+        "dark": "#E8ECF0"
+      },
+      "selectionColor": {
+        "light": "#0072B2",
+        "dark": "#56B4E9"
+      },
+      "visualizationColors": [
+        "#0072B2",
+        "#E69F00",
+        "#009E73",
+        "#CC79A7",
+        "#D55E00",
+        "#56B4E9",
+        "#9AA5B1"
+      ],
+      "widgetHeaderAlignment": "LEFT",
+      "fontFamily": "Inter",
+      "widgetCornerRadius": 12
+    },
+    "genieSpace": {
+      "isEnabled": true,
+      "overrideId": "01f1c1d6b2021400871ec7e604d38e09",
+      "enablementMode": "ENABLED"
+    }
+  }
+}
