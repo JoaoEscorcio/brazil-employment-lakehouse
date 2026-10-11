@@ -1,0 +1,4 @@
+# Dependências de desenvolvimento: testes locais e CI.
+# O código do pipeline roda no Databricks e não precisa delas.
+pytest==9.1.1
+pyspark==3.5.5
