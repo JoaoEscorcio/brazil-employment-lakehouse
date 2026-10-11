@@ -368,6 +368,23 @@
         "FROM s\n",
         "WHERE secao IN (SELECT secao FROM principais)\n"
       ]
+    },
+    {
+      "name": "ds_periodo",
+      "displayName": "ds_periodo",
+      "queryLines": [
+        "WITH r AS (\n",
+        "  SELECT MIN(competencia_mov) AS inicio, MAX(competencia_mov) AS fim,\n",
+        "         MIN(CASE WHEN preliminar THEN competencia_mov END) AS prelim\n",
+        "  FROM brazil_employment.gold.caged_fluxo\n",
+        "),\n",
+        "m AS (SELECT array('jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez') AS nomes)\n",
+        "SELECT\n",
+        "  concat(element_at(nomes, inicio % 100), '/', inicio DIV 100, ' a ',\n",
+        "         element_at(nomes, fim % 100), '/', fim DIV 100) AS periodo,\n",
+        "  concat('A partir de ', element_at(nomes, prelim % 100), '/', prelim DIV 100) AS preliminar\n",
+        "FROM r CROSS JOIN m\n"
+      ]
     }
   ],
   "pages": [
@@ -396,7 +413,7 @@
             "name": "comp_destaque",
             "multilineTextboxSpec": {
               "lines": [
-                "### Na capital e no entorno, **as vagas novas ficam com os jovens**. Fora de Fortaleza o jovem tem mais espaço no emprego formal, puxado pela indústria, **mas o trabalho paga quase a metade e é mais informal**. Na capital, o desemprego jovem é o mais alto da região."
+                "### A capital e os outros 18 municípios da região: **quem fica com as vagas novas, quanto o trabalho paga, quanto é informal e onde o desemprego jovem é maior.** Cada fonte aparece no seu período mais recente."
               ]
             }
           },
@@ -582,16 +599,16 @@
                   "datasetName": "ds_comp_pnad",
                   "fields": [
                     {
+                      "name": "publico",
+                      "expression": "`publico`"
+                    },
+                    {
                       "name": "area",
                       "expression": "`area`"
                     },
                     {
                       "name": "max(renda_media_habitual)",
                       "expression": "MAX(`renda_media_habitual`)"
-                    },
-                    {
-                      "name": "publico",
-                      "expression": "`publico`"
                     }
                   ],
                   "disaggregated": false
@@ -599,7 +616,22 @@
               }
             ],
             "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": {
+                  "value": "Renda média do trabalho: jovens x todas as idades",
+                  "fields": []
+                },
+                "description": {
+                  "value": "PNAD, último trimestre, formais e informais.",
+                  "fields": []
+                }
+              },
               "version": 3,
+              "mark": {
+                "layout": "group"
+              },
               "widgetType": "bar",
               "encodings": {
                 "x": {
@@ -621,14 +653,6 @@
                   "displayName": "Renda média",
                   "scale": {
                     "type": "quantitative"
-                  },
-                  "format": {
-                    "type": "number-currency",
-                    "currencyCode": "BRL",
-                    "decimalPlaces": {
-                      "type": "max",
-                      "places": 0
-                    }
                   }
                 },
                 "color": {
@@ -652,14 +676,8 @@
                   "show": true
                 }
               },
-              "mark": {
-                "layout": "group"
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Renda média do trabalho: jovens x todas as idades",
-                "showDescription": true,
-                "description": "PNAD, último trimestre, formais e informais."
+              "data": {
+                "queryName": "main_query"
               }
             }
           },
@@ -898,14 +916,14 @@
             "name": "destaque",
             "multilineTextboxSpec": {
               "lines": [
-                "### Em 12 meses, **praticamente todo o saldo de empregos com carteira da RMF foi de jovens de 15 a 29 anos.** Para quem tem 30 anos ou mais, o saldo ficou perto de zero."
+                "### Quem fica com as vagas com carteira criadas na RMF? Compare o **saldo total** com o **saldo dos jovens de 15 a 29 anos** e a participação deles nos indicadores abaixo."
               ]
             }
           },
           "position": {
             "x": 0,
             "y": 1,
-            "width": 12,
+            "width": 8,
             "height": 2
           }
         },
@@ -1429,7 +1447,7 @@
                 "showTitle": true,
                 "title": "Saldo de empregos por mês: jovens x demais idades",
                 "showDescription": true,
-                "description": "Dezembro fica negativo todo ano (fim dos contratos temporários). Abril a junho/2026 ainda podem ser revisados pelo MTE."
+                "description": "Dezembro costuma ficar negativo (fim dos contratos temporários). Os 3 meses mais recentes ainda podem ser revisados pelo MTE."
               }
             }
           },
@@ -1774,7 +1792,7 @@
                 "showTitle": true,
                 "title": "Salário mediano de entrada por idade",
                 "showDescription": true,
-                "description": "Quem tem 18 a 24 anos entra, em geral, com exatamente um salário mínimo."
+                "description": "Mediana dos últimos 12 meses. Compare com o salário mínimo do ano (R$ 1.518 em 2025, R$ 1.621 em 2026)."
               }
             }
           },
@@ -1945,7 +1963,7 @@
                 "showTitle": true,
                 "title": "Salário mediano de entrada por setor: jovens x 30 anos ou mais",
                 "showDescription": true,
-                "description": "Últimos 12 meses, RMF. Os 10 setores que mais contratam jovens de 18 a 24 anos. Na maioria deles o jovem entra com exatamente um salário mínimo."
+                "description": "Últimos 12 meses, RMF. Os 10 setores que mais contratam jovens de 18 a 24 anos. Compare com o salário mínimo do ano (R$ 1.621 em 2026)."
               }
             }
           },
@@ -1954,6 +1972,55 @@
             "y": 35,
             "width": 12,
             "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "periodo_dados",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_periodo",
+                  "fields": [
+                    {
+                      "name": "periodo",
+                      "expression": "`periodo`"
+                    },
+                    {
+                      "name": "preliminar",
+                      "expression": "`preliminar`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "periodo",
+                    "displayName": "Dados do CAGED"
+                  },
+                  {
+                    "fieldName": "preliminar",
+                    "displayName": "Ainda podem mudar"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": false
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 1,
+            "width": 4,
+            "height": 2
           }
         }
       ],
