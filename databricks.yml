@@ -1,0 +1,56 @@
+# Databricks Asset Bundle: o projeto inteiro descrito como código.
+#
+# Um comando (`databricks bundle deploy -t <alvo>`) cria ou atualiza no workspace
+# o pipeline, o job, o dashboard e o espaço Genie, iguais em qualquer ambiente.
+# O que muda entre ambientes fica em variáveis (catálogo, warehouse, e-mail).
+
+bundle:
+  name: brazil-employment-lakehouse
+
+include:
+  - resources/*.yml
+
+# Só o código que roda no Databricks é enviado ao workspace.
+sync:
+  exclude:
+    - ingestao_local/**
+    - tests/**
+
+variables:
+  catalogo:
+    description: Catálogo onde o pipeline grava bronze, silver e gold.
+    default: brazil_employment
+  catalogo_landing:
+    description: >-
+      Catálogo da landing (arquivos brutos). É o mesmo nos dois ambientes:
+      o dev lê os arquivos do prod e grava só no catálogo dele.
+    default: brazil_employment
+  warehouse_id:
+    description: SQL warehouse do dashboard e do Genie.
+    lookup:
+      warehouse: Serverless Starter Warehouse
+  email_alerta:
+    description: >-
+      E-mail que recebe os avisos de falha do job. Sem valor padrão para não
+      ficar no repositório público: vem da variável de ambiente
+      BUNDLE_VAR_email_alerta (local) ou de um secret (CI).
+
+targets:
+  # Ambiente de desenvolvimento: nomes com prefixo "[dev <usuário>]",
+  # agendas pausadas e pipeline em modo desenvolvimento.
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-5b2f5cb3-d700.cloud.databricks.com
+    variables:
+      catalogo: brazil_employment_dev
+
+  # Produção: o que a secretaria vê.
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-5b2f5cb3-d700.cloud.databricks.com
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    run_as:
+      user_name: ${workspace.current_user.userName}

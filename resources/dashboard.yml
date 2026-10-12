@@ -1,0 +1,10 @@
+# Dashboard AI/BI. As consultas usam nomes sem catálogo (gold.tabela);
+# dataset_catalog define o catálogo de cada ambiente.
+resources:
+  dashboards:
+    observatorio_dashboard:
+      display_name: "Observatório do Emprego Jovem · RMF"
+      file_path: ../dashboards/observatorio.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalogo}
+      embed_credentials: true

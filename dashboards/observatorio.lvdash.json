@@ -32,7 +32,7 @@
         "  saldo,\n",
         "  CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN admissoes ELSE 0 END AS admissoes_jovens,\n",
         "  CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN saldo ELSE 0 END AS saldo_jovens\n",
-        "FROM brazil_employment.gold.caged_fluxo\n"
+        "FROM gold.caged_fluxo\n"
       ],
       "columns": [
         {
@@ -48,7 +48,7 @@
       "queryLines": [
         "WITH top AS (\n",
         "  SELECT cbo_descricao\n",
-        "  FROM brazil_employment.gold.caged_ocupacoes\n",
+        "  FROM gold.caged_ocupacoes\n",
         "  GROUP BY cbo_descricao\n",
         "  ORDER BY SUM(admissoes) DESC\n",
         "  LIMIT 15\n",
@@ -62,7 +62,7 @@
         "  regexp_replace(o.cbo_descricao, ' *[(][Dd]esativad[^)]*[)]', '') AS ocupacao,\n",
         "  o.admissoes,\n",
         "  o.saldo\n",
-        "FROM brazil_employment.gold.caged_ocupacoes o\n",
+        "FROM gold.caged_ocupacoes o\n",
         "WHERE o.cbo_descricao IN (SELECT cbo_descricao FROM top)\n"
       ]
     },
@@ -71,7 +71,7 @@
       "displayName": "ds_salario",
       "queryLines": [
         "SELECT faixa_etaria, salario_mediano, admissoes_com_salario\n",
-        "FROM brazil_employment.gold.caged_salario_mediano\n",
+        "FROM gold.caged_salario_mediano\n",
         "WHERE periodo = 'Últimos 12 meses' AND municipio_nome = 'Todos' AND sexo = 'Todos' AND cnae_secao_descricao = 'Todos'\n",
         "  AND faixa_etaria IN ('15-17', '18-24', '25-29', '30+')\n"
       ]
@@ -81,7 +81,7 @@
       "displayName": "ds_salario_geral",
       "queryLines": [
         "SELECT salario_mediano\n",
-        "FROM brazil_employment.gold.caged_salario_mediano\n",
+        "FROM gold.caged_salario_mediano\n",
         "WHERE periodo = 'Últimos 12 meses' AND municipio_nome = 'Todos' AND sexo = 'Todos' AND faixa_etaria = 'Todos' AND cnae_secao_descricao = 'Todos'\n"
       ]
     },
@@ -118,7 +118,7 @@
         "  CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN vinculos ELSE 0 END AS vinculos_jovens,\n",
         "  soma_rem_dezembro,\n",
         "  n_rem_dezembro\n",
-        "FROM brazil_employment.gold.rais_estoque\n"
+        "FROM gold.rais_estoque\n"
       ],
       "columns": [
         {
@@ -143,7 +143,7 @@
       "displayName": "ds_rais_municipios",
       "queryLines": [
         "SELECT recorte AS municipio, estoque, taxa_rotatividade_pct, gini\n",
-        "FROM brazil_employment.gold.rais_indicadores_municipio\n",
+        "FROM gold.rais_indicadores_municipio\n",
         "ORDER BY CASE WHEN recorte = 'RMF' THEN 0 ELSE 1 END, estoque DESC\n"
       ]
     },
@@ -167,7 +167,7 @@
         "  END AS setor,\n",
         "  quociente_locacional,\n",
         "  vinculos_setor\n",
-        "FROM brazil_employment.gold.rais_quociente_locacional\n",
+        "FROM gold.rais_quociente_locacional\n",
         "WHERE recorte = 'RMF' AND vinculos_setor >= 1000\n"
       ]
     },
@@ -185,13 +185,13 @@
         "  recorte, sexo, publico,\n",
         "  make_date(ano, trimestre * 3 - 2, 1) AS trimestre_inicio,\n",
         "  concat(CAST(ano AS STRING), ' T', CAST(trimestre AS STRING)) AS trimestre_rotulo,\n",
-        "  (ano * 10 + trimestre) = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_indicadores) AS ultimo_trimestre,\n",
+        "  (ano * 10 + trimestre) = (SELECT MAX(ano * 10 + trimestre) FROM gold.pnad_indicadores) AS ultimo_trimestre,\n",
         "  taxa_desocupacao_pct, taxa_informalidade_pct, taxa_subutilizacao_pct, taxa_desalento_pct,\n",
         "  contribuicao_previdencia_pct, conta_propria_pct, taxa_participacao_pct,\n",
         "  renda_media_habitual, renda_media_real,\n",
         "  pessoas_forca_trabalho, pessoas_ocupadas, pessoas_desocupadas,\n",
         "  desocupados_amostra, amostra_suficiente\n",
-        "FROM brazil_employment.gold.pnad_indicadores\n",
+        "FROM gold.pnad_indicadores\n",
         "WHERE publico <> 'Demais'\n",
         ")\n",
         "WHERE ultimo_trimestre\n"
@@ -206,7 +206,7 @@
         "  publico AS grupo,\n",
         "  make_date(ano, trimestre * 3 - 2, 1) AS trimestre_inicio,\n",
         "  taxa_desocupacao_pct, taxa_informalidade_pct, renda_media_real\n",
-        "FROM brazil_employment.gold.pnad_indicadores\n",
+        "FROM gold.pnad_indicadores\n",
         "WHERE publico IN ('Todos', 'Jovens (15 a 29 anos)')\n"
       ]
     },
@@ -216,8 +216,8 @@
       "queryLines": [
         "SELECT\n",
         "  p.recorte, p.posicao_ocupacao, p.pessoas\n",
-        "FROM brazil_employment.gold.pnad_posicao_ocupacao p\n",
-        "WHERE (p.ano * 10 + p.trimestre) = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_posicao_ocupacao)\n"
+        "FROM gold.pnad_posicao_ocupacao p\n",
+        "WHERE (p.ano * 10 + p.trimestre) = (SELECT MAX(ano * 10 + trimestre) FROM gold.pnad_posicao_ocupacao)\n"
       ]
     },
     {
@@ -230,7 +230,7 @@
         "    SUM(saldo) AS saldo,\n",
         "    SUM(CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN saldo ELSE 0 END) AS saldo_jovens,\n",
         "    SUM(CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN admissoes ELSE 0 END) / SUM(admissoes) AS pct_jovens_adm\n",
-        "  FROM brazil_employment.gold.caged_fluxo\n",
+        "  FROM gold.caged_fluxo\n",
         "  GROUP BY 1\n",
         "),\n",
         "admissoes_setor AS (\n",
@@ -238,7 +238,7 @@
         "    CASE WHEN municipio_nome = 'Fortaleza' THEN 'F' ELSE 'D' END AS area,\n",
         "    cnae_secao_descricao AS setor,\n",
         "    SUM(admissoes) AS admissoes\n",
-        "  FROM brazil_employment.gold.caged_fluxo\n",
+        "  FROM gold.caged_fluxo\n",
         "  GROUP BY 1, 2\n",
         "),\n",
         "setor AS (\n",
@@ -253,7 +253,7 @@
         "    SUM(vinculos) AS vinculos,\n",
         "    SUM(soma_rem_dezembro) / SUM(n_rem_dezembro) AS salario_medio,\n",
         "    SUM(CASE WHEN faixa_etaria IN ('15-17', '18-24', '25-29') THEN vinculos ELSE 0 END) / SUM(vinculos) AS pct_jovens\n",
-        "  FROM brazil_employment.gold.rais_estoque\n",
+        "  FROM gold.rais_estoque\n",
         "  GROUP BY 1\n",
         "),\n",
         "pnad AS (\n",
@@ -264,10 +264,10 @@
         "    MAX(CASE WHEN publico = 'Todos' THEN taxa_informalidade_pct END)               AS informalidade,\n",
         "    MAX(CASE WHEN publico = 'Todos' THEN renda_media_habitual END)                 AS renda,\n",
         "    MAX(concat(CAST(ano AS STRING), ' T', CAST(trimestre AS STRING)))              AS trimestre\n",
-        "  FROM brazil_employment.gold.pnad_indicadores\n",
+        "  FROM gold.pnad_indicadores\n",
         "  WHERE sexo = 'Todos'\n",
         "    AND recorte IN ('Fortaleza', 'Demais municípios da RMF')\n",
-        "    AND ano * 10 + trimestre = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_indicadores)\n",
+        "    AND ano * 10 + trimestre = (SELECT MAX(ano * 10 + trimestre) FROM gold.pnad_indicadores)\n",
         "  GROUP BY 1\n",
         "),\n",
         "linhas AS (\n",
@@ -313,11 +313,11 @@
         "  taxa_desocupacao_pct,\n",
         "  taxa_informalidade_pct,\n",
         "  renda_media_habitual\n",
-        "FROM brazil_employment.gold.pnad_indicadores\n",
+        "FROM gold.pnad_indicadores\n",
         "WHERE sexo = 'Todos'\n",
         "  AND recorte IN ('Fortaleza', 'Demais municípios da RMF')\n",
         "  AND publico IN ('Todos', 'Jovens (15 a 29 anos)')\n",
-        "  AND ano * 10 + trimestre = (SELECT MAX(ano * 10 + trimestre) FROM brazil_employment.gold.pnad_indicadores)\n"
+        "  AND ano * 10 + trimestre = (SELECT MAX(ano * 10 + trimestre) FROM gold.pnad_indicadores)\n"
       ]
     },
     {
@@ -328,7 +328,7 @@
         "  CASE WHEN municipio_nome = 'Fortaleza' THEN 'Fortaleza' ELSE 'Demais municípios da RMF' END AS area,\n",
         "  faixa_renda_sm,\n",
         "  SUM(vinculos) AS vinculos\n",
-        "FROM brazil_employment.gold.rais_estoque\n",
+        "FROM gold.rais_estoque\n",
         "GROUP BY 1, 2\n"
       ]
     },
@@ -338,8 +338,8 @@
       "queryLines": [
         "WITH s AS (\n",
         "  SELECT d.codigo AS secao, m.faixa_etaria, m.salario_mediano, m.admissoes_com_salario\n",
-        "  FROM brazil_employment.gold.caged_salario_mediano m\n",
-        "  JOIN brazil_employment.silver.dim_caged_codigo d\n",
+        "  FROM gold.caged_salario_mediano m\n",
+        "  JOIN silver.dim_caged_codigo d\n",
         "    ON d.dominio = 'secao' AND d.descricao = m.cnae_secao_descricao\n",
         "  WHERE m.periodo = 'Últimos 12 meses' AND m.municipio_nome = 'Todos' AND m.sexo = 'Todos'\n",
         "    AND m.faixa_etaria IN ('18-24', '30+') AND m.admissoes_com_salario >= 30\n",
@@ -376,7 +376,7 @@
         "WITH r AS (\n",
         "  SELECT MIN(competencia_mov) AS inicio, MAX(competencia_mov) AS fim,\n",
         "         MIN(CASE WHEN preliminar THEN competencia_mov END) AS prelim\n",
-        "  FROM brazil_employment.gold.caged_fluxo\n",
+        "  FROM gold.caged_fluxo\n",
         "),\n",
         "m AS (SELECT array('jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez') AS nomes)\n",
         "SELECT\n",

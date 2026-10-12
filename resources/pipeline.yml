@@ -1,0 +1,17 @@
+# Pipeline Lakeflow: landing -> bronze -> silver -> gold.
+# O código não tem o catálogo escrito: ele vem daqui (catalog), por ambiente.
+resources:
+  pipelines:
+    observatorio_pipeline:
+      name: observatorio-lakehouse
+      catalog: ${var.catalogo}
+      schema: bronze
+      serverless: true
+      photon: true
+      channel: CURRENT
+      root_path: ../src
+      libraries:
+        - glob:
+            include: ../src/pipelines/**
+      configuration:
+        observatorio.landing: /Volumes/${var.catalogo_landing}/landing/raw
