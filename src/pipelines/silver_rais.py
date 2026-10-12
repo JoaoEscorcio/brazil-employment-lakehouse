@@ -39,7 +39,7 @@ def remuneracao(coluna: str):
 
 
 @dp.materialized_view(
-    name="brazil_employment.silver.rais_vinculo",
+    name="silver.rais_vinculo",
     comment=(
         "Vínculos da RAIS na RMF (ano-base). Inclui encerrados no ano: para "
         "estoque de emprego, filtrar ativo_31_12 = true. Inclui servidores "
@@ -54,7 +54,7 @@ def remuneracao(coluna: str):
 @dp.expect("tem_porte", f"porte IS NOT NULL OR ibge_subsetor_codigo = {SUBSETOR_ADMINISTRACAO_PUBLICA}")
 @dp.expect("idade_plausivel", "idade BETWEEN 14 AND 100")
 def rais_silver():
-    b = spark.read.table("brazil_employment.bronze.rais_vinculo")
+    b = spark.read.table("bronze.rais_vinculo")
     idade = inteiro("idade")
     tipo_vinculo = inteiro("tipo_vinculo_codigo")
     mes_admissao = inteiro("mes_admissao_codigo")
@@ -113,8 +113,8 @@ def rais_silver():
         "_arquivo_origem",
     )
 
-    cnae = spark.read.table("brazil_employment.silver.dim_cnae_classe")
-    porte = spark.read.table("brazil_employment.silver.dim_porte")
+    cnae = spark.read.table("silver.dim_cnae_classe")
+    porte = spark.read.table("silver.dim_porte")
 
     return (
         vinculo
@@ -127,13 +127,13 @@ def rais_silver():
 # (QL = participação do setor no município / participação do setor no estado).
 # Só vínculos ativos em 31/12 (estoque, achado A6).
 @dp.materialized_view(
-    name="brazil_employment.silver.rais_estoque_ceara_secao",
+    name="silver.rais_estoque_ceara_secao",
     comment="Vínculos ativos em 31/12 no Ceará, por município e seção CNAE. Base do quociente locacional.",
 )
 @dp.expect("tem_secao_cnae", "cnae_secao IS NOT NULL")
 def rais_estoque_ceara_secao():
-    b = spark.read.table("brazil_employment.bronze.rais_ceara_vinculo")
-    cnae = spark.read.table("brazil_employment.silver.dim_cnae_classe")
+    b = spark.read.table("bronze.rais_ceara_vinculo")
+    cnae = spark.read.table("silver.dim_cnae_classe")
     return (
         b.where(inteiro("ind_vinculo_ativo_31_12_codigo") == 1)
         .select(

@@ -11,13 +11,14 @@ from pyspark.sql import functions as F
 from regras.rais import SUBSETOR_AGRO_COMERCIO_SERVICOS, SUBSETOR_INDUSTRIA_CONSTRUCAO, porte
 from regras.rmf import RMF_MUNICIPIOS, SALARIO_MINIMO_POR_ANO
 
-REFERENCIA = "/Volumes/brazil_employment/landing/raw/referencia"
+# Mesma landing da bronze (configuração observatorio.landing do pipeline).
+REFERENCIA = spark.conf.get("observatorio.landing", "/Volumes/brazil_employment/landing/raw") + "/referencia"
 
 
 # Municípios da RMF: código MTE -> nome. Materialized view porque é uma carga
 # pequena e estática (não há arquivos chegando, não faz sentido streaming).
 @dp.materialized_view(
-    name="brazil_employment.silver.dim_municipio",
+    name="silver.dim_municipio",
     comment="Os 19 municípios da Região Metropolitana de Fortaleza (LC Estadual 154/2015)",
 )
 def dim_municipio():
@@ -32,7 +33,7 @@ def dim_municipio():
 # uma linha por (dominio, codigo). Vêm dos CSVs exportados do layout oficial
 # do MTE na carga histórica; o domínio sai do nome do arquivo.
 @dp.materialized_view(
-    name="brazil_employment.silver.dim_caged_codigo",
+    name="silver.dim_caged_codigo",
     comment="Dicionários oficiais do Novo CAGED: dominio + codigo -> descricao",
 )
 def dim_caged_codigo():
@@ -54,7 +55,7 @@ def dim_caged_codigo():
 # CNAE 2.0: classe (5 dígitos) -> seção (letra). A RAIS só traz a classe; o
 # CAGED já traz a seção. Crosswalk oficial do IBGE/Concla, guardado em JSON.
 @dp.materialized_view(
-    name="brazil_employment.silver.dim_cnae_classe",
+    name="silver.dim_cnae_classe",
     comment="CNAE 2.0: classe -> seção (crosswalk oficial IBGE/Concla)",
 )
 def dim_cnae_classe():
@@ -69,7 +70,7 @@ def dim_cnae_classe():
 # estabelecimento -> porte. Gerada a partir de regras/rais.py; a RAIS faz
 # JOIN com ela (mais rápido que uma UDF e aparece no lineage).
 @dp.materialized_view(
-    name="brazil_employment.silver.dim_porte",
+    name="silver.dim_porte",
     comment="Porte de empresa: subsetor IBGE x TAMESTAB -> Micro/Pequena/Média/Grande (BID/MTE)",
 )
 def dim_porte():
@@ -83,7 +84,7 @@ def dim_porte():
 # Deflatores oficiais da PNAD (IBGE) para o Ceará: rendimento real =
 # rendimento nominal x deflator. Base = trimestre mais recente do arquivo.
 @dp.materialized_view(
-    name="brazil_employment.silver.dim_pnad_deflator",
+    name="silver.dim_pnad_deflator",
     comment="Deflatores trimestrais da PNAD Contínua para o Ceará (IBGE): rendimento real = nominal x deflator",
 )
 def dim_pnad_deflator():
@@ -101,7 +102,7 @@ def dim_pnad_deflator():
 # Salário mínimo nacional por ano: régua das faixas salariais em "salários
 # mínimos" da gold. Sai de regras/rmf.py, a mesma usada na plausibilidade (A5).
 @dp.materialized_view(
-    name="brazil_employment.silver.dim_salario_minimo",
+    name="silver.dim_salario_minimo",
     comment="Salário mínimo nacional por ano (R$), régua das faixas em salários mínimos",
 )
 def dim_salario_minimo():

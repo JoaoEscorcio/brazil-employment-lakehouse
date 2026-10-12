@@ -20,7 +20,7 @@
 --       faixa etária x grupo de raça/cor.
 -- Qualquer taxa = SUM(componente) / SUM(componente) sobre o filtro desejado.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_mercado_trabalho (
+CREATE OR REFRESH MATERIALIZED VIEW gold.pnad_mercado_trabalho (
   ano INT COMMENT 'Ano da pesquisa.',
   trimestre INT COMMENT 'Trimestre do ano (1 a 4).',
   area STRING COMMENT '''Fortaleza'' ou ''Demais municípios da RMF''. Somar as duas = RMF.',
@@ -91,8 +91,8 @@ SELECT
   SUM(CASE WHEN p.condicao_ocupacao = 1 AND p.informal AND p.rendimento_habitual IS NOT NULL THEN p.peso END) AS peso_renda_informal,
   SUM(CASE WHEN p.condicao_ocupacao = 1 AND NOT coalesce(p.informal, false) THEN p.rendimento_habitual * p.peso END) AS soma_renda_formal,
   SUM(CASE WHEN p.condicao_ocupacao = 1 AND NOT coalesce(p.informal, false) AND p.rendimento_habitual IS NOT NULL THEN p.peso END) AS peso_renda_formal
-FROM brazil_employment.silver.pnad_pessoa p
-LEFT JOIN brazil_employment.silver.dim_pnad_deflator d
+FROM silver.pnad_pessoa p
+LEFT JOIN silver.dim_pnad_deflator d
   ON d.ano = p.ano AND d.trimestre = p.trimestre
 GROUP BY ALL;
 
@@ -105,7 +105,7 @@ GROUP BY ALL;
 --         /contribuicao-previdenciaria, /subocupacao-desalento, /rendimentos,
 --         /evolucao e /evolucao-rendimento do Emprega+.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_indicadores (
+CREATE OR REFRESH MATERIALIZED VIEW gold.pnad_indicadores (
   recorte STRING COMMENT 'Área geográfica: ''RMF'' (região inteira), ''Fortaleza'' ou ''Demais municípios da RMF''. Não somar recortes: RMF já inclui os outros dois.',
   ano INT COMMENT 'Ano da pesquisa.',
   trimestre INT COMMENT 'Trimestre do ano (1 a 4).',
@@ -137,11 +137,11 @@ CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_indicadores (
 COMMENT 'Indicadores da PNAD Contínua prontos, por trimestre, recorte (RMF / Fortaleza / demais municípios da RMF), sexo e público (Todos / Jovens 15-29). Fórmulas do Glossário BID/MTE. Colunas pessoas_* = população estimada (soma de pesos); amostra_suficiente = false quando menos de 30 desocupados foram entrevistados (estimativa pouco confiável).'
 AS
 WITH base AS (
-  SELECT 'RMF' AS recorte, * FROM brazil_employment.gold.pnad_mercado_trabalho
+  SELECT 'RMF' AS recorte, * FROM gold.pnad_mercado_trabalho
   UNION ALL
-  SELECT 'Fortaleza', * FROM brazil_employment.gold.pnad_mercado_trabalho WHERE area = 'Fortaleza'
+  SELECT 'Fortaleza', * FROM gold.pnad_mercado_trabalho WHERE area = 'Fortaleza'
   UNION ALL
-  SELECT 'Demais municípios da RMF', * FROM brazil_employment.gold.pnad_mercado_trabalho WHERE area = 'Demais municípios da RMF'
+  SELECT 'Demais municípios da RMF', * FROM gold.pnad_mercado_trabalho WHERE area = 'Demais municípios da RMF'
 ),
 publico AS (
   SELECT *,
@@ -214,7 +214,7 @@ FROM agregado;
 -- Grão: trimestre x recorte (RMF / Fortaleza / demais municípios) x posição na ocupação (VD4009).
 -- Atende: /categoria-ocupacao.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_posicao_ocupacao (
+CREATE OR REFRESH MATERIALIZED VIEW gold.pnad_posicao_ocupacao (
   recorte STRING COMMENT 'Área geográfica: ''RMF'' (região inteira), ''Fortaleza'' ou ''Demais municípios da RMF''. Não somar recortes: RMF já inclui os outros dois.',
   ano INT COMMENT 'Ano da pesquisa.',
   trimestre INT COMMENT 'Trimestre do ano (1 a 4).',
@@ -226,11 +226,11 @@ CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.pnad_posicao_ocupacao
 COMMENT 'Pessoas ocupadas por posição na ocupação (PNAD VD4009), por trimestre e recorte (RMF / Fortaleza / demais municípios da RMF). pessoas = soma de peso; pessoas_amostra = entrevistados.'
 AS
 WITH ocupados AS (
-  SELECT 'RMF' AS recorte, * FROM brazil_employment.silver.pnad_pessoa WHERE condicao_ocupacao = 1
+  SELECT 'RMF' AS recorte, * FROM silver.pnad_pessoa WHERE condicao_ocupacao = 1
   UNION ALL
-  SELECT 'Fortaleza', * FROM brazil_employment.silver.pnad_pessoa WHERE condicao_ocupacao = 1 AND mora_em_fortaleza
+  SELECT 'Fortaleza', * FROM silver.pnad_pessoa WHERE condicao_ocupacao = 1 AND mora_em_fortaleza
   UNION ALL
-  SELECT 'Demais municípios da RMF', * FROM brazil_employment.silver.pnad_pessoa WHERE condicao_ocupacao = 1 AND NOT mora_em_fortaleza
+  SELECT 'Demais municípios da RMF', * FROM silver.pnad_pessoa WHERE condicao_ocupacao = 1 AND NOT mora_em_fortaleza
 )
 SELECT
   recorte, ano, trimestre,

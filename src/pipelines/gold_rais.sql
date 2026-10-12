@@ -21,7 +21,7 @@
 --         /porte-atividade, /salario-setor, /faixa-renda, /faixa-horas,
 --         /escolaridade-sexo, /tempo-emprego, /salario-hora e /rendimentos.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_estoque (
+CREATE OR REFRESH MATERIALIZED VIEW gold.rais_estoque (
   ano_base INT COMMENT 'Ano de referência da RAIS (situação em 31/12 desse ano).',
   municipio_codigo INT COMMENT 'Código do município no MTE (IBGE de 7 dígitos sem o dígito verificador; 230440 = Fortaleza).',
   municipio_nome STRING COMMENT 'Nome do município da Região Metropolitana de Fortaleza (RMF, 19 municípios).',
@@ -93,15 +93,15 @@ SELECT
   SUM(CASE WHEN r.horas_contratuais > 0 THEN r.remuneracao_media_nominal END) AS soma_rem_media_com_horas,
   SUM(CASE WHEN r.horas_contratuais > 0 AND r.remuneracao_media_nominal IS NOT NULL
            THEN r.horas_contratuais * 4.345 END)        AS soma_horas_mes
-FROM brazil_employment.silver.rais_vinculo r
-JOIN brazil_employment.silver.dim_municipio dm
+FROM silver.rais_vinculo r
+JOIN silver.dim_municipio dm
   ON dm.municipio_codigo = r.municipio_codigo
-LEFT JOIN brazil_employment.silver.dim_caged_codigo sec
+LEFT JOIN silver.dim_caged_codigo sec
   ON sec.dominio = 'secao' AND sec.codigo = r.cnae_secao
 -- a RAIS usa a mesma escala de escolaridade do CAGED (1 = analfabeto ... 11 = doutorado)
-LEFT JOIN brazil_employment.silver.dim_caged_codigo esc
+LEFT JOIN silver.dim_caged_codigo esc
   ON esc.dominio = 'graudeinstrucao' AND esc.codigo = CAST(r.grau_instrucao_codigo AS STRING)
-LEFT JOIN brazil_employment.silver.dim_salario_minimo sm
+LEFT JOIN silver.dim_salario_minimo sm
   ON sm.ano = r.ano_base
 WHERE r.ativo_31_12
 GROUP BY ALL;
@@ -111,7 +111,7 @@ GROUP BY ALL;
 -- rais_ocupacoes: estoque e salário por ocupação (CBO) e grande grupo.
 -- Grão: município x CBO. Atende: /ocupacoes e /grupamento-ocupacao.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_ocupacoes (
+CREATE OR REFRESH MATERIALIZED VIEW gold.rais_ocupacoes (
   ano_base INT COMMENT 'Ano de referência da RAIS (situação em 31/12 desse ano).',
   municipio_codigo INT COMMENT 'Código do município no MTE (IBGE de 7 dígitos sem o dígito verificador; 230440 = Fortaleza).',
   municipio_nome STRING COMMENT 'Nome do município da Região Metropolitana de Fortaleza (RMF, 19 municípios).',
@@ -146,10 +146,10 @@ SELECT
   COUNT(*)                                               AS vinculos,
   SUM(r.remuneracao_dezembro_nominal)                    AS soma_rem_dezembro,
   COUNT(r.remuneracao_dezembro_nominal)                  AS n_rem_dezembro
-FROM brazil_employment.silver.rais_vinculo r
-JOIN brazil_employment.silver.dim_municipio dm
+FROM silver.rais_vinculo r
+JOIN silver.dim_municipio dm
   ON dm.municipio_codigo = r.municipio_codigo
-LEFT JOIN brazil_employment.silver.dim_caged_codigo cbo
+LEFT JOIN silver.dim_caged_codigo cbo
   ON cbo.dominio = 'cbo2002ocupacao' AND cbo.codigo = r.cbo_codigo
 WHERE r.ativo_31_12
 GROUP BY ALL;
@@ -160,7 +160,7 @@ GROUP BY ALL;
 -- rotatividade), pré-calculados por município e para a RMF inteira.
 -- Atende: /gini e /rotatividade.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_indicadores_municipio (
+CREATE OR REFRESH MATERIALIZED VIEW gold.rais_indicadores_municipio (
   recorte STRING COMMENT 'Município da RMF ou ''RMF'' (região inteira). Ler a linha desejada; não somar.',
   estoque BIGINT COMMENT 'Empregos formais ativos em 31/12.',
   admissoes_rotatividade BIGINT COMMENT 'Admissões no ano consideradas na rotatividade (sem estatutários).',
@@ -173,8 +173,8 @@ COMMENT 'Indicadores não aditivos da RAIS por município e para a RMF inteira (
 AS
 WITH vinculos AS (
   SELECT r.*, dm.municipio_nome
-  FROM brazil_employment.silver.rais_vinculo r
-  JOIN brazil_employment.silver.dim_municipio dm
+  FROM silver.rais_vinculo r
+  JOIN silver.dim_municipio dm
     ON dm.municipio_codigo = r.municipio_codigo
 ),
 -- Gini: G = 2 * soma(posição x salário) / (n x soma(salário)) - (n + 1) / n,
@@ -226,7 +226,7 @@ LEFT JOIN gini g ON g.recorte = r.recorte;
 -- QL > 1: o setor pesa mais no recorte do que no estado.
 -- Atende: /quociente-locacional.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.rais_quociente_locacional (
+CREATE OR REFRESH MATERIALIZED VIEW gold.rais_quociente_locacional (
   recorte STRING COMMENT 'Município da RMF ou ''RMF'' (região inteira).',
   cnae_secao STRING COMMENT 'Seção da CNAE 2.0 (letra A a U) da atividade do empregador.',
   cnae_secao_descricao STRING COMMENT 'Nome da seção da CNAE 2.0 (setor de atividade), ex.: Comércio, Construção.',
@@ -239,7 +239,7 @@ COMMENT 'Quociente locacional por seção CNAE, de cada município da RMF e da R
 AS
 WITH ceara AS (
   SELECT municipio_codigo, cnae_secao, vinculos_ativos
-  FROM brazil_employment.silver.rais_estoque_ceara_secao
+  FROM silver.rais_estoque_ceara_secao
   WHERE cnae_secao IS NOT NULL
 ),
 estado AS (
@@ -249,7 +249,7 @@ estado AS (
 recortes AS (
   SELECT coalesce(dm.municipio_nome, 'RMF') AS recorte, c.cnae_secao, SUM(c.vinculos_ativos) AS setor_recorte
   FROM ceara c
-  JOIN brazil_employment.silver.dim_municipio dm
+  JOIN silver.dim_municipio dm
     ON dm.municipio_codigo = c.municipio_codigo
   GROUP BY GROUPING SETS ((dm.municipio_nome, c.cnae_secao), (c.cnae_secao))
 ),
@@ -267,5 +267,5 @@ SELECT
   ROUND((t.setor_recorte / t.total_recorte) / (e.setor_estado / e.total_estado), 2) AS quociente_locacional
 FROM totais t
 JOIN estado e ON e.cnae_secao = t.cnae_secao
-LEFT JOIN brazil_employment.silver.dim_caged_codigo sec
+LEFT JOIN silver.dim_caged_codigo sec
   ON sec.dominio = 'secao' AND sec.codigo = t.cnae_secao;

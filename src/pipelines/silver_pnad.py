@@ -30,7 +30,7 @@ def em(coluna, codigos: set):
 
 
 @dp.materialized_view(
-    name="brazil_employment.silver.pnad_pessoa",
+    name="silver.pnad_pessoa",
     comment=(
         "Pessoas entrevistadas pela PNAD Contínua na RM de Fortaleza. Amostra: "
         "somar 'peso' para estimar a população. NULL nas variáveis de trabalho "
@@ -41,7 +41,7 @@ def em(coluna, codigos: set):
 @dp.expect("sem_dados_resgatados", "_rescued_data IS NULL")
 @dp.expect("idade_plausivel", "idade BETWEEN 0 AND 130")
 def pnad_silver():
-    b = spark.read.table("brazil_employment.bronze.pnad_pessoa")
+    b = spark.read.table("bronze.pnad_pessoa")
 
     idade = inteiro("idade")
     posicao = inteiro("posicao_categoria")

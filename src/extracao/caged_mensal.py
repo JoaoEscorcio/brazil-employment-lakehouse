@@ -22,7 +22,8 @@
 # MAGIC Parâmetros:
 # MAGIC - `competencia`: vazio = automático (todas as competências publicadas depois da última
 # MAGIC   que está na landing); `AAAAMM` = só aquele mês.
-# MAGIC - `destino`: pasta de saída. Só muda para testes.
+# MAGIC - `destino`: pasta de saída (a landing do ambiente).
+# MAGIC - `catalogo`: catálogo onde fica o volume de trabalho (temporário).
 
 # COMMAND ----------
 
@@ -49,8 +50,10 @@ from regras.rmf import RMF_MUNICIPIOS  # noqa: E402
 
 dbutils.widgets.text("competencia", "", "Competência AAAAMM (vazio = automático)")
 dbutils.widgets.text("destino", "/Volumes/brazil_employment/landing/raw/caged", "Pasta de destino")
+dbutils.widgets.text("catalogo", "brazil_employment", "Catálogo do volume de trabalho")
 COMPETENCIA = dbutils.widgets.get("competencia").strip()
 DESTINO = dbutils.widgets.get("destino").rstrip("/")
+CATALOGO = dbutils.widgets.get("catalogo").strip()
 
 FTP_HOST = "ftp.mtps.gov.br"
 FTP_BASE = "pdet/microdados/NOVO CAGED"
@@ -58,11 +61,11 @@ TIPOS = ("MOV", "FOR", "EXC")
 RMF = [str(c) for c in RMF_MUNICIPIOS]
 
 # Área de trabalho separada da landing: o Auto Loader nunca vê arquivo pela metade.
-spark.sql("""
-    CREATE VOLUME IF NOT EXISTS brazil_employment.landing.trabalho
+spark.sql(f"""
+    CREATE VOLUME IF NOT EXISTS {CATALOGO}.landing.trabalho
     COMMENT 'Área temporária das extrações (arquivos baixados e descompactados). Pode ser apagada.'
 """)
-TRABALHO = "/Volumes/brazil_employment/landing/trabalho/caged"
+TRABALHO = f"/Volumes/{CATALOGO}/landing/trabalho/caged"
 
 # COMMAND ----------
 

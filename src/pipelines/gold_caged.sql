@@ -20,7 +20,7 @@
 -- Medidas ADITIVAS: qualquer filtro do painel é só um SUM sobre esta tabela.
 -- Atende: /kpis, /evolucao-mensal, /setores e /perfil do Emprega+.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.caged_fluxo (
+CREATE OR REFRESH MATERIALIZED VIEW gold.caged_fluxo (
   competencia_mov INT COMMENT 'Mês em que a movimentação aconteceu, no formato AAAAMM (ex.: 202601 = janeiro de 2026).',
   preliminar BOOLEAN COMMENT 'true para os 3 meses mais recentes, que ainda podem ser revisados pelo MTE.',
   municipio_codigo INT COMMENT 'Código do município no MTE (IBGE de 7 dígitos sem o dígito verificador; 230440 = Fortaleza).',
@@ -42,12 +42,12 @@ COMMENT 'Fluxo de emprego formal (CLT) na RMF. Grão: mês x município x faixa 
 AS
 WITH ultima AS (
   SELECT to_date(CAST(MAX(competencia_mov) AS STRING), 'yyyyMM') AS mes
-  FROM brazil_employment.silver.caged_movimentacao
+  FROM silver.caged_movimentacao
   WHERE origem_arquivo = 'MOV'
 ),
 mov AS (
   SELECT *, to_date(CAST(competencia_mov AS STRING), 'yyyyMM') AS mes
-  FROM brazil_employment.silver.caged_movimentacao
+  FROM silver.caged_movimentacao
 )
 SELECT
   m.competencia_mov,
@@ -75,13 +75,13 @@ SELECT
   SUM(m.efeito)                                                      AS saldo
 FROM mov m
 CROSS JOIN ultima u
-JOIN brazil_employment.silver.dim_municipio dm
+JOIN silver.dim_municipio dm
   ON dm.municipio_codigo = m.municipio_codigo
-LEFT JOIN brazil_employment.silver.dim_salario_minimo sm
+LEFT JOIN silver.dim_salario_minimo sm
   ON sm.ano = CAST(m.competencia_mov / 100 AS INT)
-LEFT JOIN brazil_employment.silver.dim_caged_codigo sec
+LEFT JOIN silver.dim_caged_codigo sec
   ON sec.dominio = 'secao' AND sec.codigo = m.cnae_secao
-LEFT JOIN brazil_employment.silver.dim_caged_codigo esc
+LEFT JOIN silver.dim_caged_codigo esc
   ON esc.dominio = 'graudeinstrucao' AND esc.codigo = CAST(m.grau_instrucao_codigo AS STRING)
 WHERE m.mes > add_months(u.mes, -12)
 GROUP BY ALL;
@@ -92,7 +92,7 @@ GROUP BY ALL;
 -- Grão: mês x município x faixa etária x sexo x CBO. Medidas aditivas.
 -- Atende: /ocupacoes do Emprega+.
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.caged_ocupacoes (
+CREATE OR REFRESH MATERIALIZED VIEW gold.caged_ocupacoes (
   competencia_mov INT COMMENT 'Mês em que a movimentação aconteceu, no formato AAAAMM (ex.: 202601 = janeiro de 2026).',
   preliminar BOOLEAN COMMENT 'true para os 3 meses mais recentes, que ainda podem ser revisados pelo MTE.',
   municipio_codigo INT COMMENT 'Código do município no MTE (IBGE de 7 dígitos sem o dígito verificador; 230440 = Fortaleza).',
@@ -109,12 +109,12 @@ COMMENT 'Admissões, desligamentos e saldo por ocupação (CBO 2002) na RMF. Gr�
 AS
 WITH ultima AS (
   SELECT to_date(CAST(MAX(competencia_mov) AS STRING), 'yyyyMM') AS mes
-  FROM brazil_employment.silver.caged_movimentacao
+  FROM silver.caged_movimentacao
   WHERE origem_arquivo = 'MOV'
 ),
 mov AS (
   SELECT *, to_date(CAST(competencia_mov AS STRING), 'yyyyMM') AS mes
-  FROM brazil_employment.silver.caged_movimentacao
+  FROM silver.caged_movimentacao
 )
 SELECT
   m.competencia_mov,
@@ -130,9 +130,9 @@ SELECT
   SUM(m.efeito)                                                      AS saldo
 FROM mov m
 CROSS JOIN ultima u
-JOIN brazil_employment.silver.dim_municipio dm
+JOIN silver.dim_municipio dm
   ON dm.municipio_codigo = m.municipio_codigo
-LEFT JOIN brazil_employment.silver.dim_caged_codigo cbo
+LEFT JOIN silver.dim_caged_codigo cbo
   ON cbo.dominio = 'cbo2002ocupacao' AND cbo.codigo = m.cbo_codigo
 WHERE m.mes > add_months(u.mes, -12)
 GROUP BY ALL;
@@ -149,7 +149,7 @@ GROUP BY ALL;
 -- Atende: o salário de admissão de /kpis (que no Emprega+ era a média)
 -- e o salário por setor (pergunta que o Genie respondia errado).
 -- -----------------------------------------------------------------------------
-CREATE OR REFRESH MATERIALIZED VIEW brazil_employment.gold.caged_salario_mediano (
+CREATE OR REFRESH MATERIALIZED VIEW gold.caged_salario_mediano (
   periodo STRING COMMENT 'Mês (AAAAMM) ou ''Últimos 12 meses''.',
   municipio_nome STRING COMMENT 'Nome do município ou ''Todos'' (RMF inteira).',
   faixa_etaria STRING COMMENT 'Faixa de idade ou ''Todos''. Jovem = faixas 15-17, 18-24 e 25-29.',
@@ -163,7 +163,7 @@ COMMENT 'Salário mensal MEDIANO de admissão na RMF, pré-calculado para cada c
 AS
 WITH ultima AS (
   SELECT to_date(CAST(MAX(competencia_mov) AS STRING), 'yyyyMM') AS mes
-  FROM brazil_employment.silver.caged_movimentacao
+  FROM silver.caged_movimentacao
   WHERE origem_arquivo = 'MOV'
 ),
 admissoes AS (
@@ -174,11 +174,11 @@ admissoes AS (
     coalesce(m.sexo, 'Não informado')            AS sexo,
     coalesce(sec.descricao, 'Não informado')     AS cnae_secao_descricao,
     m.salario_mensal
-  FROM brazil_employment.silver.caged_movimentacao m
+  FROM silver.caged_movimentacao m
   CROSS JOIN ultima u
-  JOIN brazil_employment.silver.dim_municipio dm
+  JOIN silver.dim_municipio dm
     ON dm.municipio_codigo = m.municipio_codigo
-  LEFT JOIN brazil_employment.silver.dim_caged_codigo sec
+  LEFT JOIN silver.dim_caged_codigo sec
     ON sec.dominio = 'secao' AND sec.codigo = m.cnae_secao
   WHERE m.saldo_movimentacao = 1
     AND m.origem_arquivo IN ('MOV', 'FOR')

@@ -47,7 +47,7 @@ RMF_SQL = ",".join(str(c) for c in RMF_MUNICIPIOS)
 #                     porque continua sendo uma movimentação válida.
 # -----------------------------------------------------------------------------
 @dp.materialized_view(
-    name="brazil_employment.silver.caged_movimentacao",
+    name="silver.caged_movimentacao",
     comment=(
         "Movimentações do Novo CAGED na RMF (MOV, FOR e EXC). Uma linha por "
         "movimentação; efeito = sinal no saldo (EXC invertido, NT 11/2021); "
@@ -61,7 +61,7 @@ RMF_SQL = ",".join(str(c) for c in RMF_MUNICIPIOS)
 @dp.expect("idade_plausivel", "idade BETWEEN 14 AND 100")
 @dp.expect("tem_salario_mensal_plausivel", "salario_mensal IS NOT NULL")  # A5
 def caged_silver():
-    b = spark.read.table("brazil_employment.bronze.caged_movimentacao")
+    b = spark.read.table("bronze.caged_movimentacao")
 
     idade = inteiro("idade")
     saldo = inteiro("saldomovimentacao")

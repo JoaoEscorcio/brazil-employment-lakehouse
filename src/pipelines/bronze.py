@@ -15,7 +15,9 @@ from pyspark.sql import functions as F
 # Pasta de entrada: onde chegam os arquivos da carga histórica (máquina local)
 # e da carga mensal (Job). A bronze não sabe nem precisa saber de onde cada
 # arquivo veio: os dois caminhos gravam no mesmo lugar e no mesmo formato.
-LANDING = "/Volumes/brazil_employment/landing/raw"
+# Vem da configuração do pipeline (observatorio.landing) para que o ambiente
+# de dev leia a mesma landing do prod e grave só no catálogo dele.
+LANDING = spark.conf.get("observatorio.landing", "/Volumes/brazil_employment/landing/raw")
 
 
 # -----------------------------------------------------------------------------
@@ -46,9 +48,10 @@ def _auto_loader(pasta: str, particoes: str):
 # -----------------------------------------------------------------------------
 # Tabelas bronze: uma por fonte
 #
-# Os nomes são completos (catálogo.schema.tabela) porque o mesmo pipeline vai
-# gravar também em silver e gold. O comment aparece no catálogo e é lido pelo
-# Genie.
+# Os nomes levam o schema (schema.tabela) porque o mesmo pipeline grava em
+# bronze, silver e gold. O catálogo NÃO aparece no código: vem da configuração
+# do pipeline (brazil_employment no prod, brazil_employment_dev no dev).
+# O comment aparece no catálogo e é lido pelo Genie.
 # -----------------------------------------------------------------------------
 
 # CAGED: movimentações mensais de emprego formal (admissões e desligamentos).
@@ -57,7 +60,7 @@ def _auto_loader(pasta: str, particoes: str):
 # Os arquivos EXC têm 2 colunas a mais (competenciaexc, indicadordeexclusao),
 # que ficam NULL nas linhas de MOV e FOR.
 @dp.table(
-    name="brazil_employment.bronze.caged_movimentacao",
+    name="bronze.caged_movimentacao",
     comment="Novo CAGED (MOV/FOR/EXC) recortado para a RMF, como veio da fonte",
 )
 def caged_bronze():
@@ -66,7 +69,7 @@ def caged_bronze():
 
 # RAIS: estoque anual de vínculos formais (inclui servidores públicos).
 @dp.table(
-    name="brazil_employment.bronze.rais_vinculo",
+    name="bronze.rais_vinculo",
     comment="RAIS Vínculos públicos recortada para a RMF, como veio da fonte",
 )
 def rais_bronze():
@@ -75,7 +78,7 @@ def rais_bronze():
 
 # PNAD Contínua: amostra de domicílios, inclui informais e desocupados.
 @dp.table(
-    name="brazil_employment.bronze.pnad_pessoa",
+    name="bronze.pnad_pessoa",
     comment="PNAD Contínua, pessoas da RM de Fortaleza (RM_RIDE=23), como veio da fonte",
 )
 
@@ -88,7 +91,7 @@ def pnad_bronze():
 # RAIS do Ceará inteiro, só 3 colunas (município, vínculo ativo, classe CNAE).
 # Existe para o quociente locacional, que compara cada município com o estado.
 @dp.table(
-    name="brazil_employment.bronze.rais_ceara_vinculo",
+    name="bronze.rais_ceara_vinculo",
     comment="RAIS Vínculos do Ceará inteiro (UF 23), só as colunas do quociente locacional, como veio da fonte",
 )
 def rais_ceara_bronze():
