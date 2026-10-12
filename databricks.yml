@@ -59,12 +59,22 @@ targets:
     workspace:
       host: https://dbc-5b2f5cb3-d700.cloud.databricks.com
       root_path: /Workspace/Users/${var.usuario_prod}/.bundle/${bundle.name}/${bundle.target}
-    run_as:
-      user_name: ${var.usuario_prod}
-    # O dashboard e o espaço Genie de prod já existiam antes do bundle (adotados
-    # com `bundle deployment bind`). A pasta deles não pode mudar sem recriar o
-    # recurso, o que trocaria o id e o link: ficam onde sempre estiveram.
     resources:
+      # Pipeline e job rodam como o usuário de prod, não como o service principal
+      # que faz o deploy. O run_as fica nos recursos, e não no alvo inteiro, porque
+      # dashboard com credencial embutida não aceita run_as diferente de quem
+      # publica: ele é publicado com a credencial do service principal da CI.
+      pipelines:
+        observatorio_pipeline:
+          run_as:
+            user_name: ${var.usuario_prod}
+      jobs:
+        observatorio_mensal:
+          run_as:
+            user_name: ${var.usuario_prod}
+      # O dashboard e o espaço Genie de prod já existiam antes do bundle (adotados
+      # com `bundle deployment bind`). A pasta deles não pode mudar sem recriar o
+      # recurso, o que trocaria o id e o link: ficam onde sempre estiveram.
       dashboards:
         observatorio_dashboard:
           parent_path: /Workspace/Users/${var.usuario_prod}
