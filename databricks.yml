@@ -15,6 +15,7 @@ sync:
   exclude:
     - ingestao_local/**
     - tests/**
+    - .claude/**
 
 variables:
   catalogo:
