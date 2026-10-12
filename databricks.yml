@@ -35,6 +35,12 @@ variables:
       E-mail que recebe os avisos de falha do job. Sem valor padrão para não
       ficar no repositório público: vem da variável de ambiente
       BUNDLE_VAR_email_alerta (local) ou de um secret (CI).
+  usuario_prod:
+    description: >-
+      Usuário dono do ambiente de prod: a pasta do bundle, quem o pipeline e o
+      job rodam como, e a pasta do dashboard e do Genie. Fixo de propósito: o
+      deploy de prod é feito pela CI (um service principal), e sem esta
+      variável tudo passaria a pertencer ao robô. Vem de BUNDLE_VAR_usuario_prod.
 
 targets:
   # Ambiente de desenvolvimento: nomes com prefixo "[dev <usuário>]",
@@ -52,16 +58,16 @@ targets:
     mode: production
     workspace:
       host: https://dbc-5b2f5cb3-d700.cloud.databricks.com
-      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+      root_path: /Workspace/Users/${var.usuario_prod}/.bundle/${bundle.name}/${bundle.target}
     run_as:
-      user_name: ${workspace.current_user.userName}
+      user_name: ${var.usuario_prod}
     # O dashboard e o espaço Genie de prod já existiam antes do bundle (adotados
     # com `bundle deployment bind`). A pasta deles não pode mudar sem recriar o
     # recurso, o que trocaria o id e o link: ficam onde sempre estiveram.
     resources:
       dashboards:
         observatorio_dashboard:
-          parent_path: /Workspace/Users/${workspace.current_user.userName}
+          parent_path: /Workspace/Users/${var.usuario_prod}
       genie_spaces:
         observatorio_genie:
-          parent_path: /Workspace/Users/${workspace.current_user.userName}
+          parent_path: /Workspace/Users/${var.usuario_prod}

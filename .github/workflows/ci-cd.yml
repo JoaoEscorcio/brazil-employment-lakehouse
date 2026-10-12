@@ -1,0 +1,68 @@
+# CI/CD do Observatório.
+#
+#   pull request ou push  ->  testes  ->  bundle validate          (CI)
+#   push na main          ->  testes  ->  bundle validate  ->  deploy em prod   (CD)
+#
+# Credenciais (Settings > Secrets and variables > Actions):
+#   DATABRICKS_CLIENT_ID / DATABRICKS_CLIENT_SECRET  service principal da CI (OAuth M2M)
+#   EMAIL_ALERTA                                     e-mail dos avisos de falha do job
+#   USUARIO_PROD                                     usuário dono do ambiente de prod
+# O host do workspace está no databricks.yml.
+
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Um deploy de cada vez: dois merges seguidos não implantam em paralelo.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+  DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+  BUNDLE_VAR_email_alerta: ${{ secrets.EMAIL_ALERTA }}
+  BUNDLE_VAR_usuario_prod: ${{ secrets.USUARIO_PROD }}
+
+jobs:
+  testes:
+    name: Testes unitários
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      # O runner já tem Java 17, então os testes de Spark (src/comum) rodam aqui,
+      # diferente da máquina local sem Java, onde são pulados.
+      - run: pip install -r requirements-dev.txt
+      - run: pytest
+
+  validar:
+    name: Validar bundle
+    needs: testes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@main
+      - run: databricks bundle validate -t prod
+
+  deploy:
+    name: Deploy em prod
+    needs: validar
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: databricks/setup-cli@main
+      - run: databricks bundle plan -t prod
+      # Sem --auto-approve de propósito: se o deploy for apagar ou recriar algum
+      # recurso (ex.: o dashboard), o CLI pede confirmação, que não existe na CI,
+      # e o deploy falha em vez de destruir algo em silêncio.
+      - run: databricks bundle deploy -t prod
